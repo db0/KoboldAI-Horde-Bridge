@@ -6,7 +6,7 @@ STDOUT_LEVELS = ["GENERATION", "PROMPT"]
 INIT_LEVELS = ["INIT", "INIT_OK", "INIT_WARN", "INIT_ERR"]
 MESSAGE_LEVELS = ["MESSAGE"]
 # By default we're at error level or higher
-verbosity = 40
+verbosity = 30
 quiet = 0
 
 def set_logger_verbosity(count):

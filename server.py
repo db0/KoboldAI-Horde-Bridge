@@ -68,6 +68,7 @@ def after_request(response):
 
 class SyncGenerate(Resource):
     decorators = [limiter.limit("10/minute")]
+    @logger.catch
     def post(self, api_version = None):
         parser = reqparse.RequestParser()
         parser.add_argument("prompt", type=str, required=True, help="The prompt to generate from")
@@ -80,11 +81,12 @@ class SyncGenerate(Resource):
         parser.add_argument("world_info", type=str, required=False, help="If specified, only servers who can load this this world info will generate this request")
         args = parser.parse_args()
         username = 'Anonymous'
+        user = None
         if args.api_key:
             user = _db.find_user_by_api_key(args['api_key'])
-            if not user:
-                return(f"{get_error(ServerErrors.INVALID_API_KEY, subject = 'prompt generation')}",401)
-            username = user.get_unique_alias()
+        if not user:
+            return(f"{get_error(ServerErrors.INVALID_API_KEY, subject = 'prompt generation')}",401)
+        username = user.get_unique_alias()
         if args['prompt'] == '':
             return(f"{get_error(ServerErrors.EMPTY_PROMPT, username = username)}",400)
         wp_count = _waiting_prompts.count_waiting_requests(user)
@@ -128,6 +130,7 @@ class SyncGenerate(Resource):
 
 class AsyncGeneratePrompt(Resource):
     decorators = [limiter.limit("30/minute")]
+    @logger.catch
     def get(self, api_version = None, id = ''):
         wp = _waiting_prompts.get_item(id)
         if not wp:
@@ -137,6 +140,7 @@ class AsyncGeneratePrompt(Resource):
 
 class AsyncGenerate(Resource):
     decorators = [limiter.limit("10/minute")]
+    @logger.catch
     def post(self, api_version = None):
         parser = reqparse.RequestParser()
         parser.add_argument("prompt", type=str, required=True, help="The prompt to generate from")
@@ -172,6 +176,7 @@ class AsyncGenerate(Resource):
 
 class PromptPop(Resource):
     decorators = [limiter.limit("45/second")]
+    @logger.catch
     def post(self, api_version = None):
         parser = reqparse.RequestParser()
         parser.add_argument("api_key", type=str, required=True, help="The API Key corresponding to a registered user")
@@ -235,6 +240,7 @@ class PromptPop(Resource):
 
 
 class SubmitGeneration(Resource):
+    @logger.catch
     def post(self, api_version = None):
         parser = reqparse.RequestParser()
         parser.add_argument("id", type=str, required=True, help="The processing generation uuid")
@@ -255,6 +261,7 @@ class SubmitGeneration(Resource):
         return({"reward": chars}, 200)
 
 class TransferKudos(Resource):
+    @logger.catch
     def post(self, api_version = None):
         parser = reqparse.RequestParser()
         parser.add_argument("username", type=str, required=True, help="The user ID which will receive the kudos")
@@ -272,11 +279,13 @@ class TransferKudos(Resource):
         return({"transfered": kudos}, 200)
 
 class Models(Resource):
+    @logger.catch
     def get(self, api_version = None):
         return(_db.get_available_models(),200)
 
 
 class Servers(Resource):
+    @logger.catch
     def get(self, api_version = None):
         servers_ret = []
         for server in _db.servers.values():
@@ -299,6 +308,7 @@ class Servers(Resource):
         return(servers_ret,200)
 
 class ServerSingle(Resource):
+    @logger.catch
     def get(self, api_version = None, server_id = ''):
         server = None
         for s in _db.servers.values():
@@ -323,6 +333,7 @@ class ServerSingle(Resource):
 
 
 class Users(Resource):
+    @logger.catch
     def get(self, api_version = None):
         user_dict = {}
         for user in _db.users.values():
@@ -337,6 +348,7 @@ class Users(Resource):
 
 
 class UserSingle(Resource):
+    @logger.catch
     def get(self, api_version = None, user_id = ''):
         logger.debug(user_id)
         user = None
@@ -355,7 +367,7 @@ class UserSingle(Resource):
         else:
             return("Not found", 404)
 
-
+@logger.catch
 @REST_API.route('/')
 def index():
     with open('index.md') as index_file:
@@ -442,7 +454,7 @@ def get_oauth_id():
         oauth_id = f'gh_{github_data["id"]}'
     return(oauth_id)
 
-
+@logger.catch
 @REST_API.route('/register', methods=['GET', 'POST'])
 def register():
     api_key = None
@@ -480,7 +492,7 @@ def register():
                            pseudonymous=pseudonymous,
                            oauth_id=oauth_id)
 
-
+@logger.catch
 @REST_API.route('/transfer', methods=['GET', 'POST'])
 def transfer():
     src_api_key = None
