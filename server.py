@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template, redirect, url_for, request, abort
 from flask_restful import Resource, reqparse, Api
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -22,6 +22,7 @@ class ServerErrors(Enum):
     EMPTY_PROMPT = 4
     INVALID_API_KEY = 5
     INVALID_MODEL = 6
+    NO_PROXY = 7
 
 REST_API = Flask(__name__)
 # Very basic DOS prevention
@@ -57,7 +58,15 @@ def get_error(error, **kwargs):
     if error == ServerErrors.INVALID_MODEL:
         logger.warning(f'Server "{kwargs["name"]}" tried to prompt pop with invalid model: {kwargs["model"]}. Aborting!')
         return(f'Invalid model for generating: {kwargs["model"]}.')
+    if error == ServerErrors.NO_PROXY:
+        logger.warning(f'Attempt to access outside reverse proxy')
+        return(f'Access allowed only through https')
 
+@REST_API.before_request
+def limit_remote_addr():
+    if request.remote_addr != '127.0.0.1':
+        error_msg = get_error(ServerErrors.NO_PROXY)
+        abort(403, error_msg)
 
 @REST_API.after_request
 def after_request(response):
