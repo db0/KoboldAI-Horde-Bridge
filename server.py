@@ -64,7 +64,7 @@ def get_error(error, **kwargs):
 
 @REST_API.before_request
 def limit_remote_addr():
-    if request.remote_addr != '127.0.0.1':
+    if request.remote_addr not in ['127.0.0.1','193.164.132.214']:
         error_msg = get_error(ServerErrors.NO_PROXY)
         abort(403, error_msg)
 
