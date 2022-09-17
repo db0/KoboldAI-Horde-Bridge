@@ -91,7 +91,11 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         else:
             try:
                 pop_req = requests.post(cluster + '/api/v1/generate/pop', json = gen_dict)
-            except requests.exceptions.ConnectionError:
+            except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
+                logger.warning(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
+                time.sleep(10)
+                continue
+            except requests.exceptions.ReadTimeout:
                 logger.warning(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                 time.sleep(10)
                 continue
