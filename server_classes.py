@@ -501,12 +501,11 @@ class Stats:
     def get_kilochars_per_min(self):
         total_chars = 0
         pruned_array = []
-        logger.debug(self.fulfillments)
         for fulfillment in self.fulfillments.copy():
             if (datetime.now() - fulfillment["deliver_time"]).seconds <= 60:
                 pruned_array.append(fulfillment)
                 total_chars += fulfillment["chars"]
-                logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
+                # logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
         # To avoid race condition, we do it all in the same place, instead of using a thread
         if (datetime.now() - self.last_pruning).seconds > self.interval:
             self.last_pruning = datetime.now()
