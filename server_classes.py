@@ -337,11 +337,16 @@ class PromptsIndex(Index):
                 count += 1
         return(count)
 
-    def count_total_waiting_generations(self):
-        count = 0
+    def count_totals(self):
+        ret_dict = {
+            "queued_requests": 0,
+            "queued_tokens": 0,
+        }
         for wp in self._index.values():
-            count += wp.n
-        return(count)
+            ret_dict["queued_requests"] += wp.n
+            ret_dict["queued_tokens"] += len(wp.max_length)
+        return(ret_dict)
+
 
     def get_waiting_wp_by_kudos(self):
         sorted_wp_list = sorted(self._index.values(), key=lambda x: x.user.kudos, reverse=True)
@@ -531,6 +536,12 @@ class Stats:
             multiplier = 1
         self.model_mulitpliers[model_name] = multiplier
         return(multiplier)
+
+    def get_request_avg(self):
+        if len(self.server_performances) == 0:
+            return(0)
+        avg = sum(self.server_performances) / len(self.server_performances)
+        return(round(avg,1))
 
     @logger.catch
     def serialize(self):

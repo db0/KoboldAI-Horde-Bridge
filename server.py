@@ -371,15 +371,11 @@ class UserSingle(Resource):
         else:
             return("Not found", 404)
 
-class SystemLoad(Resource):
+class HordeLoad(Resource):
     @logger.catch
     def get(self, api_version = None):
-        load_dict = {
-            "queued_chars": 0,
-            "queued_requests": 0,
-            "chars_per_sec": 0
-
-        }
+        load_dict = _waiting_prompts.count_totals()
+        load_dict["chars_per_min"] = _db.stats.get_chars_per_min()
         return(load_dict,200)
 
 @logger.catch
@@ -422,10 +418,10 @@ This is the server which has generated the most chars for the horde.
     findex = index.format(
         kobold_image = align_image,
         avg_performance= _db.stats.get_request_avg(),
-        total_chars = totals["chars"],
+        total_chars = round(totals["chars"] / 1000000,2),
         total_fulfillments = totals["fulfilments"],
         active_servers = _db.count_active_servers(),
-        total_queue = _waiting_prompts.count_total_waiting_generations(),
+        total_queue = _waiting_prompts.count_totals()["queued_requests"],
     )
     head = """<head>
     <title>KoboldAI Horde</title>
@@ -649,6 +645,7 @@ if __name__ == "__main__":
     api.add_resource(ServerSingle, "/servers/<string:server_id>","/api/<string:api_version>/servers/<string:server_id>")
     api.add_resource(Models, "/models","/api/<string:api_version>/models")
     api.add_resource(TransferKudos, "/api/<string:api_version>/kudos/transfer")
+    api.add_resource(HordeLoad, "/api/<string:api_version>/status/performance")
     from waitress import serve
     logger.init("WSGI Server", status="Starting")
     serve(REST_API, host="0.0.0.0", port="5001",url_scheme=url_scheme)
