@@ -145,9 +145,9 @@ class ProcessingGeneration:
         self.generation = generation
         chars = len(generation)
         kudos = self.owner._db.convert_chars_to_kudos(chars, self.model)
-        self.server.record_contribution(chars, kudos)
+        chars_per_sec = self.owner._db.stats.record_fulfilment(chars,self.start_time)
+        self.server.record_contribution(chars, kudos, chars_per_sec)
         self.owner.record_usage(chars, kudos)
-        self._db.stats.record_fulfilment(chars,self.start_time)
         logger.info(f"New Generation worth {kudos} kudos, delivered by server: {self.server.name}")
         return(chars)
 
@@ -190,7 +190,7 @@ class KAIServer:
             # Every 10 minutes of uptime gets kudos rewarded
             if self.uptime - self.last_reward_uptime > self.uptime_reward_threshold:
                 # Bigger model uptime gets more kudos
-                kudos = round(self._db.calculate_model_multiplier(model) / 2.75, 2)
+                kudos = round(self._db.stats.calculate_model_multiplier(model) / 2.75, 2)
                 self.modify_kudos(kudos,'uptime')
                 self.user.record_uptime(kudos)
                 logger.debug(f"server '{self.name}' received {kudos} kudos for uptime of {self.uptime_reward_threshold} seconds.")
@@ -246,12 +246,12 @@ class KAIServer:
             skipped_reason = 'matching_softprompt'
         return([is_matching,skipped_reason])
 
-    def record_contribution(self, chars, kudos):
+    def record_contribution(self, chars, kudos, chars_per_sec):
         self.user.record_contributions(chars, kudos)
         self.modify_kudos(kudos,'generated')
         self.contributions += chars
         self.fulfilments += 1
-        self.performances.append(perf)
+        self.performances.append(chars_per_sec)
         if len(self.performances) > 20:
             del self.performances[0]
 
@@ -344,7 +344,8 @@ class PromptsIndex(Index):
         }
         for wp in self._index.values():
             ret_dict["queued_requests"] += wp.n
-            ret_dict["queued_tokens"] += len(wp.max_length)
+            if wp.n > 0:
+                ret_dict["queued_tokens"] += wp.max_length
         return(ret_dict)
 
 
@@ -485,16 +486,17 @@ class Stats:
     # Deletes all fulfilment entries older than 1 minute
     def prune_fulfillments(self):
         logger.init_ok("Pruning Thread", status="Started")
+        pruned_array = []
         while True:
-            for iter in range(len(self.fulfillments)):
-                fulfillment = self.fulfillments[iter]
-                if (fulfillment["deliver_time"] - datetime.now()).seconds > 60:
-                    del self.fulfillments[iter]
+            for fulfillment in self.fulfillments:
+                if (datetime.now() - fulfillment["deliver_time"]).seconds <= 60:
+                    pruned_array.append(fulfillment)
+            self.fulfillments = pruned_array
             time.sleep(self.interval)
 
 
     def record_fulfilment(self, chars, starting_time):
-        seconds_taken = (datetime.now() - self.start_time).seconds
+        seconds_taken = (datetime.now() - starting_time).seconds
         if seconds_taken == 0:
             chars_per_sec = 1
         else:
@@ -508,15 +510,17 @@ class Stats:
             "deliver_time": datetime.now(),
         }
         self.fulfillments.append(fulfillment_dict)
+        return(chars_per_sec)
 
-    def get_chars_per_min(self):
+    def get_kilochars_per_min(self):
         total_chars = 0
         for fulfillment in self.fulfillments:
-            if (fulfillment["deliver_time"] - datetime.now()).seconds > 60:
+            if (datetime.now() - fulfillment["deliver_time"]).seconds > 60:
                 continue
             total_chars += fulfillment["chars"]
-        chars_per_min = round(total_chars / 60,2)
-        return(chars_per_min)
+            # logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
+        kilochars_per_min = round(total_chars / 60 / 1000,2)
+        return(kilochars_per_min)
 
     def calculate_model_multiplier(self, model_name):
         # To avoid doing this calculations all the time
@@ -529,7 +533,7 @@ class Stats:
             with accelerate.init_empty_weights():
                 model = transformers.AutoModelForCausalLM.from_config(config)
             params_sum = sum(v.numel() for v in model.state_dict().values())
-            logger.info(params_sum)
+            logger.info(f"New Model {model_name} parameter = {params_sum}")
             multiplier = params_sum / 1000000000
         except OSError:
             logger.error(f"Model '{model_name}' not found in hugging face. Defaulting to multiplier of 1.")
@@ -548,9 +552,9 @@ class Stats:
         serialized_fulfillments = []
         for fulfillment in self.fulfillments:
             json_fulfillment = {
-                "chars": class_dict["chars"],
-                "start_time": class_dict["start_time"].strftime("%Y-%m-%d %H:%M:%S"),
-                "deliver_time": class_dict["deliver_time"].strftime("%Y-%m-%d %H:%M:%S"),
+                "chars": fulfillment["chars"],
+                "start_time": fulfillment["start_time"].strftime("%Y-%m-%d %H:%M:%S"),
+                "deliver_time": fulfillment["deliver_time"].strftime("%Y-%m-%d %H:%M:%S"),
             }
             serialized_fulfillments.append(json_fulfillment)
         ret_dict = {
@@ -570,9 +574,9 @@ class Stats:
         deserialized_fulfillments = []
         for fulfillment in saved_dict.get("fulfillments", []):
             class_fulfillment = {
-                "chars": file_dict["chars"],
-                "start_time": datetime.strptime(file_dict["start_time"]),
-                "deliver_time":datetime.strptime( file_dict["deliver_time"]),
+                "chars": fulfillment["chars"],
+                "start_time": datetime.strptime(fulfillment["start_time"],"%Y-%m-%d %H:%M:%S"),
+                "deliver_time":datetime.strptime( fulfillment["deliver_time"],"%Y-%m-%d %H:%M:%S"),
             }
             deserialized_fulfillments.append(class_fulfillment)
         self.model_mulitpliers = saved_dict["model_mulitpliers"]
