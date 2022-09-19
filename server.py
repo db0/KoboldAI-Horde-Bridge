@@ -371,6 +371,17 @@ class UserSingle(Resource):
         else:
             return("Not found", 404)
 
+class SystemLoad(Resource):
+    @logger.catch
+    def get(self, api_version = None):
+        load_dict = {
+            "queued_chars": 0,
+            "queued_requests": 0,
+            "chars_per_sec": 0
+
+        }
+        return(load_dict,200)
+
 @logger.catch
 @REST_API.route('/')
 def index():
@@ -410,7 +421,7 @@ This is the server which has generated the most chars for the horde.
     totals = _db.get_total_usage()
     findex = index.format(
         kobold_image = align_image,
-        avg_performance= _db.get_request_avg(),
+        avg_performance= _db.stats.get_request_avg(),
         total_chars = totals["chars"],
         total_fulfillments = totals["fulfilments"],
         active_servers = _db.count_active_servers(),

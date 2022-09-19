@@ -147,7 +147,7 @@ class ProcessingGeneration:
         kudos = self.owner._db.convert_chars_to_kudos(chars, self.model)
         self.server.record_contribution(chars, kudos)
         self.owner.record_usage(chars, kudos)
-        self._db.record_fulfilment(chars,self.start_time)
+        self._db.stats.record_fulfilment(chars,self.start_time)
         logger.info(f"New Generation worth {kudos} kudos, delivered by server: {self.server.name}")
         return(chars)
 
@@ -471,12 +471,20 @@ class Stats:
         self.server_performances = []
         self.model_mulitpliers = {}
         self.fulfillments = []
+        self.interval = interval
 
+        thread = threading.Thread(target=self.prune_fulfillments, args=())
+        thread.daemon = True
+        thread.start()
 
+    # Deletes all fulfilment entries older than 1 minute
     def prune_fulfillments(self):
+        logger.init_ok("Pruning Thread", status="Started")
         while True:
-            for fulfillment in self.fulfillments:
-                pass
+            for iter in range(len(self.fulfillments)):
+                fulfillment = self.fulfillments[iter]
+                if (fulfillment["deliver_time"] - datetime.now()).seconds > 60:
+                    del self.fulfillments[iter]
             time.sleep(self.interval)
 
 
@@ -496,11 +504,14 @@ class Stats:
         }
         self.fulfillments.append(fulfillment_dict)
 
-    def get_request_avg(self):
-        if len(self.server_performances) == 0:
-            return(0)
-        avg = sum(self.server_performances) / len(self.server_performances)
-        return(round(avg,1))
+    def get_chars_per_min(self):
+        total_chars = 0
+        for fulfillment in self.fulfillments:
+            if (fulfillment["deliver_time"] - datetime.now()).seconds > 60:
+                continue
+            total_chars += fulfillment["chars"]
+        chars_per_min = round(total_chars / 60,2)
+        return(chars_per_min)
 
     def calculate_model_multiplier(self, model_name):
         # To avoid doing this calculations all the time
@@ -591,8 +602,10 @@ class Database:
         thread = threading.Thread(target=self.write_files, args=())
         thread.daemon = True
         thread.start()
+        logger.init_ok(f"Database Load", status="Completed")
 
     def write_files(self):
+        logger.init_ok("Database Store Thread", status="Started")
         while True:
             self.write_files_to_disk()
             time.sleep(self.interval)
@@ -658,17 +671,6 @@ class Database:
             totals["chars"] += server.contributions
             totals["fulfilments"] += server.fulfilments
         return(totals)
-
-    def record_fulfilment(self, token_per_sec):
-        if len(self.stats["fulfilment_times"]) >= 10:
-            del self.stats["fulfilment_times"][0]
-        self.stats["fulfilment_times"].append(token_per_sec)
-
-    def get_request_avg(self):
-        if len(self.stats["fulfilment_times"]) == 0:
-            return(0)
-        avg = sum(self.stats["fulfilment_times"]) / len(self.stats["fulfilment_times"])
-        return(round(avg,1))
 
     def register_new_user(self, user):
         self.last_user_id += 1
