@@ -514,11 +514,11 @@ class Stats:
 
     def get_kilochars_per_min(self):
         total_chars = 0
-        for fulfillment in self.fulfillments:
+        for fulfillment in self.fulfillments.copy():
             if (datetime.now() - fulfillment["deliver_time"]).seconds > 60:
                 continue
             total_chars += fulfillment["chars"]
-            # logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
+            logger.info([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
         kilochars_per_min = round(total_chars / 60 / 1000,2)
         return(kilochars_per_min)
 
