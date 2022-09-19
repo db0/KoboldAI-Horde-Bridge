@@ -519,7 +519,7 @@ class Stats:
                 continue
             total_chars += fulfillment["chars"]
             logger.info([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
-        kilochars_per_min = round(total_chars / 60 / 1000,2)
+        kilochars_per_min = round(total_chars / 1000,2)
         return(kilochars_per_min)
 
     def calculate_model_multiplier(self, model_name):
