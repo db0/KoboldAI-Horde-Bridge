@@ -478,21 +478,7 @@ class Stats:
         self.model_mulitpliers = {}
         self.fulfillments = []
         self.interval = interval
-
-        thread = threading.Thread(target=self.prune_fulfillments, args=())
-        thread.daemon = True
-        thread.start()
-
-    # Deletes all fulfilment entries older than 1 minute
-    def prune_fulfillments(self):
-        logger.init_ok("Pruning Thread", status="Started")
-        pruned_array = []
-        while True:
-            for fulfillment in self.fulfillments:
-                if (datetime.now() - fulfillment["deliver_time"]).seconds <= 60:
-                    pruned_array.append(fulfillment)
-            self.fulfillments = pruned_array
-            time.sleep(self.interval)
+        self.last_pruning = datetime.now()
 
 
     def record_fulfilment(self, chars, starting_time):
@@ -514,12 +500,18 @@ class Stats:
 
     def get_kilochars_per_min(self):
         total_chars = 0
+        pruned_array = []
         logger.debug(self.fulfillments)
         for fulfillment in self.fulfillments.copy():
-            if (datetime.now() - fulfillment["deliver_time"]).seconds > 60:
-                continue
-            total_chars += fulfillment["chars"]
-            logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
+            if (datetime.now() - fulfillment["deliver_time"]).seconds <= 60:
+                pruned_array.append(fulfillment)
+                total_chars += fulfillment["chars"]
+                logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
+        # To avoid race condition, we do it all in the same place, instead of using a thread
+        if datetime.now() - self.last_pruning > interval:
+            self.last_pruning = datetime.now()
+            self.fulfillments = pruned_array
+            logger.debug("Pruned fulfillments")
         kilochars_per_min = round(total_chars / 1000,2)
         return(kilochars_per_min)
 
