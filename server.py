@@ -375,9 +375,8 @@ class HordeLoad(Resource):
     @logger.catch
     def get(self, api_version = None):
         load_dict = _waiting_prompts.count_totals()
-        logger.info(load_dict)
         load_dict["kilochars_per_min"] = _db.stats.get_kilochars_per_min()
-        logger.info(load_dict)
+        logger.debug(load_dict)
         return(load_dict,200)
 
 @logger.catch
