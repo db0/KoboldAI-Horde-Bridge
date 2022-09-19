@@ -534,10 +534,18 @@ class Stats:
 
     @logger.catch
     def serialize(self):
+        serialized_fulfillments = []
+        for fulfillment in self.fulfillments:
+            json_fulfillment = {
+                "chars": class_dict["chars"],
+                "start_time": class_dict["start_time"].strftime("%Y-%m-%d %H:%M:%S"),
+                "deliver_time": class_dict["deliver_time"].strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            serialized_fulfillments.append(json_fulfillment)
         ret_dict = {
             "server_performances": self.server_performances,
             "model_mulitpliers": self.model_mulitpliers,
-            "fulfillments": self.fulfillments,
+            "fulfillments": serialized_fulfillments,
         }
         return(ret_dict)
 
@@ -548,9 +556,17 @@ class Stats:
             self.server_performances = saved_dict["fulfilment_times"]
         else:
             self.server_performances = saved_dict["server_performances"]
+        deserialized_fulfillments = []
+        for fulfillment in saved_dict.get("fulfillments", []):
+            class_fulfillment = {
+                "chars": file_dict["chars"],
+                "start_time": datetime.strptime(file_dict["start_time"]),
+                "deliver_time":datetime.strptime( file_dict["deliver_time"]),
+            }
+            deserialized_fulfillments.append(class_fulfillment)
         self.model_mulitpliers = saved_dict["model_mulitpliers"]
-        self.fulfillments = saved_dict.get("fulfillments", [])
-
+        self.fulfillments = deserialized_fulfillments
+    
 
 class Database:
     def __init__(self, convert_flag = None, interval = 3):
