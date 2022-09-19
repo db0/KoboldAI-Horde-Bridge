@@ -508,7 +508,7 @@ class Stats:
                 total_chars += fulfillment["chars"]
                 logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
         # To avoid race condition, we do it all in the same place, instead of using a thread
-        if datetime.now() - self.last_pruning > interval:
+        if datetime.now() - self.last_pruning > self.interval:
             self.last_pruning = datetime.now()
             self.fulfillments = pruned_array
             logger.debug("Pruned fulfillments")
