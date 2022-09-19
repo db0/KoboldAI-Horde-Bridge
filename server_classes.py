@@ -1,4 +1,4 @@
-import json, os
+import json, os, sys
 from uuid import uuid4
 from datetime import datetime
 import threading, time
@@ -145,8 +145,9 @@ class ProcessingGeneration:
         self.generation = generation
         chars = len(generation)
         kudos = self.owner._db.convert_chars_to_kudos(chars, self.model)
-        self.server.record_contribution(chars, kudos, (datetime.now() - self.start_time).seconds)
+        self.server.record_contribution(chars, kudos)
         self.owner.record_usage(chars, kudos)
+        self._db.record_fulfilment(chars,self.start_time)
         logger.info(f"New Generation worth {kudos} kudos, delivered by server: {self.server.name}")
         return(chars)
 
@@ -245,11 +246,9 @@ class KAIServer:
             skipped_reason = 'matching_softprompt'
         return([is_matching,skipped_reason])
 
-    def record_contribution(self, chars, kudos, seconds_taken):
-        perf = round(chars / seconds_taken,1)
+    def record_contribution(self, chars, kudos):
         self.user.record_contributions(chars, kudos)
         self.modify_kudos(kudos,'generated')
-        self._db.record_fulfilment(perf)
         self.contributions += chars
         self.fulfilments += 1
         self.performances.append(perf)
@@ -295,7 +294,7 @@ class KAIServer:
         }
         return(ret_dict)
 
-    def deserialize(self, saved_dict):
+    def deserialize(self, saved_dict, convert_flag = None):
         self.user = self._db.find_user_by_oauth_id(saved_dict["oauth_id"])
         self.name = saved_dict["name"]
         self.model = saved_dict["model"]
@@ -444,7 +443,7 @@ class User:
         }
         return(ret_dict)
 
-    def deserialize(self, saved_dict):
+    def deserialize(self, saved_dict, convert_flag = None):
         self.username = saved_dict["username"]
         self.oauth_id = saved_dict["oauth_id"]
         self.api_key = saved_dict["api_key"]
@@ -466,8 +465,84 @@ class User:
         self.last_active = datetime.strptime(saved_dict["last_active"],"%Y-%m-%d %H:%M:%S")
 
 
+class Stats:
+    def __init__(self, db, convert_flag = None, interval = 60):
+        self.db = db
+        self.server_performances = []
+        self.model_mulitpliers = {}
+        self.fulfillments = []
+
+
+    def prune_fulfillments(self):
+        while True:
+            for fulfillment in self.fulfillments:
+                pass
+            time.sleep(self.interval)
+
+
+    def record_fulfilment(self, chars, starting_time):
+        seconds_taken = (datetime.now() - self.start_time).seconds
+        if seconds_taken == 0:
+            chars_per_sec = 1
+        else:
+            chars_per_sec = round(chars / seconds_taken,1)
+        if len(self.server_performances) >= 10:
+            del self.server_performances[0]
+        self.server_performances.append(chars_per_sec)
+        fulfillment_dict = {
+            "chars": chars,
+            "start_time": starting_time,
+            "deliver_time": datetime.now(),
+        }
+        self.fulfillments.append(fulfillment_dict)
+
+    def get_request_avg(self):
+        if len(self.server_performances) == 0:
+            return(0)
+        avg = sum(self.server_performances) / len(self.server_performances)
+        return(round(avg,1))
+
+    def calculate_model_multiplier(self, model_name):
+        # To avoid doing this calculations all the time
+        multiplier = self.model_mulitpliers.get(model_name)
+        if multiplier:
+            return(multiplier)
+        try:
+            import transformers, accelerate
+            config = transformers.AutoConfig.from_pretrained(model_name)
+            with accelerate.init_empty_weights():
+                model = transformers.AutoModelForCausalLM.from_config(config)
+            params_sum = sum(v.numel() for v in model.state_dict().values())
+            logger.info(params_sum)
+            multiplier = params_sum / 1000000000
+        except OSError:
+            logger.error(f"Model '{model_name}' not found in hugging face. Defaulting to multiplier of 1.")
+            multiplier = 1
+        self.model_mulitpliers[model_name] = multiplier
+        return(multiplier)
+
+    @logger.catch
+    def serialize(self):
+        ret_dict = {
+            "server_performances": self.server_performances,
+            "model_mulitpliers": self.model_mulitpliers,
+            "fulfillments": self.fulfillments,
+        }
+        return(ret_dict)
+
+    @logger.catch
+    def deserialize(self, saved_dict, convert_flag = None):
+        # Convert old key
+        if "fulfilment_times" in saved_dict:
+            self.server_performances = saved_dict["fulfilment_times"]
+        else:
+            self.server_performances = saved_dict["server_performances"]
+        self.model_mulitpliers = saved_dict["model_mulitpliers"]
+        self.fulfillments = saved_dict.get("fulfillments", [])
+
+
 class Database:
-    def __init__(self, interval = 3):
+    def __init__(self, convert_flag = None, interval = 3):
         self.interval = interval
         self.ALLOW_ANONYMOUS = True
         # This is used for synchronous generations
@@ -475,21 +550,21 @@ class Database:
         self.servers = {}
         # Other miscellaneous statistics
         self.STATS_FILE = "db/stats.json"
-        self.stats = {
-            "fulfilment_times": [],
-            "model_mulitpliers": {},
-        }
+        self.stats = Stats(self)
         self.USERS_FILE = "db/users.json"
         self.users = {}
         # Increments any time a new user is added
         # Is appended to usernames, to ensure usernames never conflict
         self.last_user_id = 0
+        logger.init(f"Database Load", status="Starting")
+        if convert_flag:
+            logger.init_warn(f"Convert Flag '{convert_flag}' received.", status="Converting")
         if os.path.isfile(self.USERS_FILE):
             with open(self.USERS_FILE) as db:
                 serialized_users = json.load(db)
                 for user_dict in serialized_users:
                     new_user = User(self)
-                    new_user.deserialize(user_dict)
+                    new_user.deserialize(user_dict,convert_flag)
                     self.users[new_user.oauth_id] = new_user
                     if new_user.id > self.last_user_id:
                         self.last_user_id = new_user.id
@@ -503,12 +578,16 @@ class Database:
                 serialized_servers = json.load(db)
                 for server_dict in serialized_servers:
                     new_server = KAIServer(self)
-                    new_server.deserialize(server_dict)
+                    new_server.deserialize(server_dict,convert_flag)
                     self.servers[new_server.name] = new_server
         if os.path.isfile(self.STATS_FILE):
-            with open(self.STATS_FILE) as db:
-                self.stats = json.load(db)
+            with open(self.STATS_FILE) as stats_db:
+                self.stats.deserialize(json.load(stats_db),convert_flag)
 
+        if convert_flag:
+            self.write_files_to_disk()
+            logger.init_ok(f"Convertion complete.", status="Exiting")
+            sys.exit()
         thread = threading.Thread(target=self.write_files, args=())
         thread.daemon = True
         thread.start()
@@ -529,7 +608,7 @@ class Database:
         with open(self.SERVERS_FILE, 'w') as db:
             json.dump(server_serialized_list,db)
         with open(self.STATS_FILE, 'w') as db:
-            json.dump(self.stats,db)
+            json.dump(self.stats.serialize(),db)
         user_serialized_list = []
         for user in self.users.values():
             user_serialized_list.append(user.serialize())
@@ -653,27 +732,8 @@ class Database:
         kudos = self.transfer_kudos_to_username(source_user, dest_username, amount)
         return(kudos)
 
-    def calculate_model_multiplier(self, model_name):
-        # To avoid doing this calculations all the time
-        multiplier = self.stats["model_mulitpliers"].get(model_name)
-        if multiplier:
-            return(multiplier)
-        try:
-            import transformers, accelerate
-            config = transformers.AutoConfig.from_pretrained(model_name)
-            with accelerate.init_empty_weights():
-                model = transformers.AutoModelForCausalLM.from_config(config)
-            params_sum = sum(v.numel() for v in model.state_dict().values())
-            logger.info(params_sum)
-            multiplier = params_sum / 1000000000
-        except OSError:
-            logger.error(f"Model '{model_name}' not found in hugging face. Defaulting to multiplier of 1.")
-            multiplier = 1
-        self.stats["model_mulitpliers"][model_name] = multiplier
-        return(multiplier)
-
     def convert_chars_to_kudos(self, chars, model_name):
-        multiplier = self.calculate_model_multiplier(model_name)
+        multiplier = self.stats.calculate_model_multiplier(model_name)
         kudos = round(chars * multiplier / 100,2)
         # logger.info([chars,multiplier,kudos])
         return(kudos)
