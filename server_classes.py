@@ -555,7 +555,6 @@ class Stats:
             "model_mulitpliers": self.model_mulitpliers,
             "fulfillments": serialized_fulfillments,
         }
-        logger.debug(f"Serialized DB: {ret_dict}")
         return(ret_dict)
 
     @logger.catch
