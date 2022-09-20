@@ -178,9 +178,9 @@ class ProcessingGeneration:
         tokens = self.owner.max_length
         self.kudos = self.owner._db.convert_tokens_to_kudos(tokens, self.model)
         tokens_per_sec = self.owner._db.stats.record_fulfilment(tokens,self.start_time)
-        self.server.record_contribution(tokens, kudos, tokens_per_sec)
-        self.owner.record_usage(tokens, kudos)
-        logger.info(f"New Generation worth {kudos} kudos, delivered by server: {self.server.name}")
+        self.server.record_contribution(tokens, self.kudos, tokens_per_sec)
+        self.owner.record_usage(tokens, self.kudos)
+        logger.info(f"New Generation worth {self.kudos} kudos, delivered by server: {self.server.name}")
         return(self.kudos)
 
     def is_completed(self):
