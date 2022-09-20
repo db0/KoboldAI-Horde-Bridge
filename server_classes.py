@@ -90,7 +90,7 @@ class WaitingPrompt:
                 ret_dict["processing"] += 1
         return(ret_dict)
 
-    def get_status(self):
+    def get_status(self, lite = False):
         ret_dict = self.count_processing_gens()
         ret_dict["waiting"] = self.n
         ret_dict["done"] = self.is_completed()
@@ -115,14 +115,21 @@ class WaitingPrompt:
         for procgen in self.processing_gens:
             wait_time += procgen.get_expected_time_left()
         ret_dict["wait_time"] = round(wait_time)
-        for procgen in self.processing_gens:
-            if procgen.is_completed():
-                gen_dict = {
-                    "text": procgen.generation,
-                    "server_id": procgen.server.id,
-                    "server_name": procgen.server.name,
-                }
-                ret_dict["generations"].append(gen_dict)
+        if not lite:
+            for procgen in self.processing_gens:
+                if procgen.is_completed():
+                    gen_dict = {
+                        "text": procgen.generation,
+                        "server_id": procgen.server.id,
+                        "server_name": procgen.server.name,
+                    }
+                    ret_dict["generations"].append(gen_dict)
+        return(ret_dict)
+
+
+    # Same as status, but without the images to avoid unnecessary size
+    def get_lite_status(self):
+        ret_dict = self.get_status(True)
         return(ret_dict)
 
     # Get out position in the working prompts queue sorted by kudos

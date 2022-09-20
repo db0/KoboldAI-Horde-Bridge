@@ -146,6 +146,15 @@ class AsyncGeneratePrompt(Resource):
         return(wp.get_status(), 200)
 
 
+class AsyncCheck(Resource):
+    @logger.catch
+    def get(self, api_version = None, id = ''):
+        wp = _waiting_prompts.get_item(id)
+        if not wp:
+            return("ID not found", 404)
+        return(wp.get_lite_status(), 200)
+
+
 class AsyncGenerate(Resource):
     decorators = [limiter.limit("10/minute")]
     def post(self, api_version = None):
@@ -639,6 +648,7 @@ if __name__ == "__main__":
     api.add_resource(SyncGenerate, "/generate/sync","/api/<string:api_version>/generate/sync")
     api.add_resource(AsyncGenerate, "/generate/async","/api/<string:api_version>/generate/async")
     api.add_resource(AsyncGeneratePrompt, "/generate/prompt/<string:id>","/api/<string:api_version>/generate/prompt/<string:id>")
+    api.add_resource(AsyncCheck, "/generate/prompt/<string:id>","/api/<string:api_version>/generate/check/<string:id>")
     api.add_resource(PromptPop, "/generate/pop","/api/<string:api_version>/generate/pop")
     api.add_resource(SubmitGeneration, "/generate/submit","/api/<string:api_version>/generate/submit")
     api.add_resource(Users, "/users","/api/<string:api_version>/users")
