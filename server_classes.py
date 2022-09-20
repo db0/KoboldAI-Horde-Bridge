@@ -309,6 +309,14 @@ class KAIServer:
         self.kudos = round(self.kudos + kudos, 2)
         self.kudos_details[action] = round(self.kudos_details.get(action,0) + abs(kudos), 2) 
 
+    def get_performance_average(self):
+        if len(self.performances):
+            ret_num = sum(self.performances) / len(self.performances)
+        else:
+            # Always sending at least 1 pixelstep per second, to avoid divisions by zero
+            ret_num = 1
+        return(ret_num)
+
     def get_performance(self):
         if len(self.performances):
             ret_str = f'{round(sum(self.performances) / len(self.performances),1)} tokens per second'
