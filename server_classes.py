@@ -46,6 +46,11 @@ class WaitingPrompt:
         thread.daemon = True
         thread.start()
 
+    # The mps still queued to be generated for this WP
+    def get_queued_tokens(self):
+        return(round(self.max_length * self.n,2))
+
+
     def needs_gen(self):
         if self.n > 0:
             return(True)
@@ -186,6 +191,17 @@ class ProcessingGeneration:
     def delete(self):
         self._processing_generations.del_item(self)
         del self
+
+    def get_expected_time_left(self):
+        if self.is_completed():
+            return(0)
+        seconds_needed = self.owner.max_length / self.server.get_performance_average()
+        seconds_elapsed = (datetime.now() - self.start_time).seconds
+        expected_time = seconds_needed - seconds_elapsed
+        # In case we run into a slow request
+        if expected_time < 0:
+            expected_time = 0
+        return(expected_time)
 
 
 class KAIServer:
@@ -394,11 +410,10 @@ class PromptsIndex(Index):
         n_ahead_in_queue = 0
         priority_sorted_list = self.get_waiting_wp_by_kudos()
         for iter in range(len(priority_sorted_list)):
-            mps_ahead_in_queue += priority_sorted_list[iter].get_queued_megapixelsteps()
+            tokens_ahead_in_queue += priority_sorted_list[iter].get_queued_tokens()
             n_ahead_in_queue += priority_sorted_list[iter].n
             if priority_sorted_list[iter] == wp:
-                mps_ahead_in_queue = round(mps_ahead_in_queue,2)
-                return(iter, mps_ahead_in_queue, n_ahead_in_queue)
+                return(iter, tokens_ahead_in_queue, n_ahead_in_queue)
         # -1 means the WP is done and not in the queue
         return(-1,0,0)
 
