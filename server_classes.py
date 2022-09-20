@@ -95,7 +95,7 @@ class WaitingPrompt:
         ret_dict["waiting"] = self.n
         ret_dict["done"] = self.is_completed()
         ret_dict["generations"] = []
-        queue_pos, queued_mps, queued_n = self.get_own_queue_stats()
+        queue_pos, queued_tokens, queued_n = self.get_own_queue_stats()
         # We increment the priority by 1, because it starts at 0
         # This means when all our requests are currently processing or done, with nothing else in the queue, we'll show queue position 0 which is appropriate.
         ret_dict["queue_position"] = queue_pos + 1
@@ -104,13 +104,13 @@ class WaitingPrompt:
         # Then we need to adjust the parallelization accordingly
         if queued_n < active_servers:
             active_servers = queued_n
-        mpss = (self._db.stats.get_request_avg() / 1000000) * active_servers
+        avg_token_per_sec = (self._db.stats.get_request_avg()) * active_servers
         # Is this is 0, it means one of two things:
         # 1. This horde hasn't had any requests yet. So we'll initiate it to 1mpss
         # 2. All gens for this WP are being currently processed, so we'll just set it to 1 to avoid a div by zero, but it's not used anyway as it will just divide 0/1
-        if mpss == 0:
-            mpss = 1
-        wait_time = queued_mps / mpss
+        if avg_token_per_sec == 0:
+            avg_token_per_sec = 1
+        wait_time = queued_tokens / avg_token_per_sec
         # We add the expected running time of our processing gens
         for procgen in self.processing_gens:
             wait_time += procgen.get_expected_time_left()
