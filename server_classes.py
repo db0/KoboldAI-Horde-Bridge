@@ -21,7 +21,7 @@ class WaitingPrompt:
             self.n = 20
         self.max_length = params.get("max_length", 80)
         self.max_content_length = params.get("max_content_length", 1024)
-        self.total_usage = 0
+        self.total_usage = round(self.max_length * self.n / 1000000,2)
         self.id = str(uuid4())
         # This is what we send to KoboldAI to the /generate/ API
         self.gen_payload = params
@@ -90,6 +90,26 @@ class WaitingPrompt:
         ret_dict["waiting"] = self.n
         ret_dict["done"] = self.is_completed()
         ret_dict["generations"] = []
+        queue_pos, queued_mps, queued_n = self.get_own_queue_stats()
+        # We increment the priority by 1, because it starts at 0
+        # This means when all our requests are currently processing or done, with nothing else in the queue, we'll show queue position 0 which is appropriate.
+        ret_dict["queue_position"] = queue_pos + 1
+        active_servers = self._db.count_active_servers()
+        # If there's less requests than the number of active servers
+        # Then we need to adjust the parallelization accordingly
+        if queued_n < active_servers:
+            active_servers = queued_n
+        mpss = (self._db.stats.get_request_avg() / 1000000) * active_servers
+        # Is this is 0, it means one of two things:
+        # 1. This horde hasn't had any requests yet. So we'll initiate it to 1mpss
+        # 2. All gens for this WP are being currently processed, so we'll just set it to 1 to avoid a div by zero, but it's not used anyway as it will just divide 0/1
+        if mpss == 0:
+            mpss = 1
+        wait_time = queued_mps / mpss
+        # We add the expected running time of our processing gens
+        for procgen in self.processing_gens:
+            wait_time += procgen.get_expected_time_left()
+        ret_dict["wait_time"] = round(wait_time)
         for procgen in self.processing_gens:
             if procgen.is_completed():
                 gen_dict = {
@@ -100,9 +120,15 @@ class WaitingPrompt:
                 ret_dict["generations"].append(gen_dict)
         return(ret_dict)
 
-    def record_usage(self, chars, kudos):
-        self.total_usage += chars
-        self.user.record_usage(chars, kudos)
+    # Get out position in the working prompts queue sorted by kudos
+    # If this gen is completed, we return (-1,-1) which represents this, to avoid doing operations.
+    def get_own_queue_stats(self):
+        if self.needs_gen():
+            return(self._waiting_prompts.get_wp_queue_stats(self))
+        return(-1,0,0)
+
+    def record_usage(self, tokens, kudos):
+        self.user.record_usage(tokens, kudos)
         self.refresh()
 
     def check_for_stale(self):
@@ -136,6 +162,7 @@ class ProcessingGeneration:
         # We store the model explicitly, in case the server changed models between generations
         self.model = server.model
         self.generation = None
+        self.kudos = 0
         self.start_time = datetime.now()
         self._processing_generations.add_item(self)
 
@@ -143,13 +170,13 @@ class ProcessingGeneration:
         if self.is_completed():
             return(0)
         self.generation = generation
-        chars = len(generation)
-        kudos = self.owner._db.convert_chars_to_kudos(chars, self.model)
-        chars_per_sec = self.owner._db.stats.record_fulfilment(chars,self.start_time)
-        self.server.record_contribution(chars, kudos, chars_per_sec)
-        self.owner.record_usage(chars, kudos)
+        tokens = self.owner.max_length
+        self.kudos = self.owner._db.convert_tokens_to_kudos(tokens, self.model)
+        tokens_per_sec = self.owner._db.stats.record_fulfilment(tokens,self.start_time)
+        self.server.record_contribution(tokens, kudos, tokens_per_sec)
+        self.owner.record_usage(tokens, kudos)
         logger.info(f"New Generation worth {kudos} kudos, delivered by server: {self.server.name}")
-        return(chars)
+        return(self.kudos)
 
     def is_completed(self):
         if self.generation:
@@ -246,12 +273,12 @@ class KAIServer:
             skipped_reason = 'matching_softprompt'
         return([is_matching,skipped_reason])
 
-    def record_contribution(self, chars, kudos, chars_per_sec):
-        self.user.record_contributions(chars, kudos)
+    def record_contribution(self, tokens, kudos, tokens_per_sec):
+        self.user.record_contributions(tokens, kudos)
         self.modify_kudos(kudos,'generated')
-        self.contributions += chars
+        self.contributions += tokens
         self.fulfilments += 1
-        self.performances.append(chars_per_sec)
+        self.performances.append(tokens_per_sec)
         if len(self.performances) > 20:
             del self.performances[0]
 
@@ -261,7 +288,7 @@ class KAIServer:
 
     def get_performance(self):
         if len(self.performances):
-            ret_str = f'{round(sum(self.performances) / len(self.performances),1)} chars per second'
+            ret_str = f'{round(sum(self.performances) / len(self.performances),1)} tokens per second'
         else:
             ret_str = f'No requests fulfilled yet'
         return(ret_str)
@@ -301,6 +328,8 @@ class KAIServer:
         self.max_length = saved_dict["max_length"]
         self.max_content_length = saved_dict["max_content_length"]
         self.contributions = saved_dict["contributions"]
+        if convert_flag == "to_tokens":
+            self.contributions = round(saved_dict["contributions"] / 4)
         self.fulfilments = saved_dict["fulfilments"]
         self.kudos = saved_dict.get("kudos",0)
         self.kudos_details = saved_dict.get("kudos_details",self.kudos_details)
@@ -357,6 +386,21 @@ class PromptsIndex(Index):
                 final_wp_list.append(wp)
         return(final_wp_list)
 
+    # Returns the queue position of the provided WP based on kudos
+    # Also returns the amount of mps until the wp is generated
+    # Also returns the amount of different gens queued
+    def get_wp_queue_stats(self, wp):
+        tokens_ahead_in_queue = 0
+        n_ahead_in_queue = 0
+        priority_sorted_list = self.get_waiting_wp_by_kudos()
+        for iter in range(len(priority_sorted_list)):
+            mps_ahead_in_queue += priority_sorted_list[iter].get_queued_megapixelsteps()
+            n_ahead_in_queue += priority_sorted_list[iter].n
+            if priority_sorted_list[iter] == wp:
+                mps_ahead_in_queue = round(mps_ahead_in_queue,2)
+                return(iter, mps_ahead_in_queue, n_ahead_in_queue)
+        # -1 means the WP is done and not in the queue
+        return(-1,0,0)
 
 
 class GenerationsIndex(Index):
@@ -381,11 +425,11 @@ class User:
         self.last_active = datetime.now()
         self.id = 0
         self.contributions = {
-            "chars": 0,
+            "tokens": 0,
             "fulfillments": 0
         }
         self.usage = {
-            "chars": 0,
+            "tokens": 0,
             "requests": 0
         }
 
@@ -398,11 +442,11 @@ class User:
         self.last_active = datetime.now()
         self.id = self._db.register_new_user(self)
         self.contributions = {
-            "chars": 0,
+            "tokens": 0,
             "fulfillments": 0
         }
         self.usage = {
-            "chars": 0,
+            "tokens": 0,
             "requests": 0
         }
 
@@ -415,13 +459,13 @@ class User:
     def get_unique_alias(self):
         return(f"{self.username}#{self.id}")
 
-    def record_usage(self, chars, kudos):
-        self.usage["chars"] += chars
+    def record_usage(self, tokens, kudos):
+        self.usage["tokens"] += tokens
         self.usage["requests"] += 1
         self.modify_kudos(-kudos,"accumulated")
 
-    def record_contributions(self, chars, kudos):
-        self.contributions["chars"] += chars
+    def record_contributions(self, tokens, kudos):
+        self.contributions["tokens"] += tokens
         self.contributions["fulfillments"] += 1
         self.modify_kudos(kudos,"accumulated")
 
@@ -458,15 +502,13 @@ class User:
         self.id = saved_dict["id"]
         self.invite_id = saved_dict["invite_id"]
         self.contributions = saved_dict["contributions"]
-        # if "tokens" in self.contributions:
-        #     self.contributions["chars"] = self.contributions["tokens"] * 4
-        #     self.record_contributions(self.contributions["chars"], self.contributions["chars"] / 100)
-        #     del self.contributions["tokens"]
+        if convert_flag == "to_tokens" and "chars" in self.contributions:
+            self.contributions["tokens"] = round(self.contributions["chars"] / 4)
+            del self.contributions["chars"]
         self.usage = saved_dict["usage"]
-        # if "tokens" in self.usage:
-        #     self.usage["chars"] = self.usage["tokens"] * 4
-        #     self.record_contributions(self.usage["chars"], -self.usage["chars"] / 100)
-        #     del self.usage["tokens"]
+        if convert_flag == "to_tokens" and "chars" in self.usage:
+            self.usage["tokens"] = round(self.usage["chars"] / 4)
+            del self.usage["chars"]
         self.creation_date = datetime.strptime(saved_dict["creation_date"],"%Y-%m-%d %H:%M:%S")
         self.last_active = datetime.strptime(saved_dict["last_active"],"%Y-%m-%d %H:%M:%S")
 
@@ -481,38 +523,38 @@ class Stats:
         self.last_pruning = datetime.now()
 
 
-    def record_fulfilment(self, chars, starting_time):
+    def record_fulfilment(self, tokens, starting_time):
         seconds_taken = (datetime.now() - starting_time).seconds
         if seconds_taken == 0:
-            chars_per_sec = 1
+            tokens_per_sec = 1
         else:
-            chars_per_sec = round(chars / seconds_taken,1)
+            tokens_per_sec = round(tokens / seconds_taken,1)
         if len(self.server_performances) >= 10:
             del self.server_performances[0]
-        self.server_performances.append(chars_per_sec)
+        self.server_performances.append(tokens_per_sec)
         fulfillment_dict = {
-            "chars": chars,
+            "tokens": tokens,
             "start_time": starting_time,
             "deliver_time": datetime.now(),
         }
         self.fulfillments.append(fulfillment_dict)
-        return(chars_per_sec)
+        return(tokens_per_sec)
 
-    def get_kilochars_per_min(self):
-        total_chars = 0
+    def get_kilotokens_per_min(self):
+        total_tokens = 0
         pruned_array = []
         for fulfillment in self.fulfillments.copy():
             if (datetime.now() - fulfillment["deliver_time"]).seconds <= 60:
                 pruned_array.append(fulfillment)
-                total_chars += fulfillment["chars"]
-                # logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_chars])
+                total_tokens += fulfillment["tokens"]
+                # logger.debug([(datetime.now() - fulfillment["deliver_time"]).seconds, total_tokens])
         # To avoid race condition, we do it all in the same place, instead of using a thread
         if (datetime.now() - self.last_pruning).seconds > self.interval:
             self.last_pruning = datetime.now()
             self.fulfillments = pruned_array
             logger.debug("Pruned fulfillments")
-        kilochars_per_min = round(total_chars / 1000,2)
-        return(kilochars_per_min)
+        kilotokens_per_min = round(total_tokens / 1000,2)
+        return(kilotokens_per_min)
 
     def calculate_model_multiplier(self, model_name):
         # To avoid doing this calculations all the time
@@ -544,7 +586,7 @@ class Stats:
         serialized_fulfillments = []
         for fulfillment in self.fulfillments:
             json_fulfillment = {
-                "chars": fulfillment["chars"],
+                "tokens": fulfillment["tokens"],
                 "start_time": fulfillment["start_time"].strftime("%Y-%m-%d %H:%M:%S"),
                 "deliver_time": fulfillment["deliver_time"].strftime("%Y-%m-%d %H:%M:%S"),
             }
@@ -565,8 +607,10 @@ class Stats:
             self.server_performances = saved_dict["server_performances"]
         deserialized_fulfillments = []
         for fulfillment in saved_dict.get("fulfillments", []):
+            if convert_flag == "to_tokens":
+                fulfillment["tokens"] = round(fulfillment["chars"] / 4)
             class_fulfillment = {
-                "chars": fulfillment["chars"],
+                "tokens": fulfillment["tokens"],
                 "start_time": datetime.strptime(fulfillment["start_time"],"%Y-%m-%d %H:%M:%S"),
                 "deliver_time":datetime.strptime( fulfillment["deliver_time"],"%Y-%m-%d %H:%M:%S"),
             }
@@ -656,9 +700,9 @@ class Database:
         top_contributor = None
         user = None
         for user in self.users.values():
-            if user.contributions['chars'] > top_contribution and user != self.anon:
+            if user.contributions['tokens'] > top_contribution and user != self.anon:
                 top_contributor = user
-                top_contribution = user.contributions['chars']
+                top_contribution = user.contributions['tokens']
         return(top_contributor)
 
     def get_top_server(self):
@@ -687,11 +731,11 @@ class Database:
 
     def get_total_usage(self):
         totals = {
-            "chars": 0,
+            "tokens": 0,
             "fulfilments": 0,
         }
         for server in self.servers.values():
-            totals["chars"] += server.contributions
+            totals["tokens"] += server.contributions
             totals["fulfilments"] += server.fulfilments
         return(totals)
 
@@ -757,9 +801,10 @@ class Database:
         kudos = self.transfer_kudos_to_username(source_user, dest_username, amount)
         return(kudos)
 
-    def convert_chars_to_kudos(self, chars, model_name):
+    def convert_tokens_to_kudos(self, tokens, model_name):
         multiplier = self.stats.calculate_model_multiplier(model_name)
-        kudos = round(chars * multiplier / 100,2)
-        # logger.info([chars,multiplier,kudos])
+        # We want a 2.7B model at 80 tokens to be worth around 10 kudos
+        kudos = round(tokens * multiplier / 21, 2)
+        # logger.info([tokens,multiplier,kudos])
         return(kudos)
 
