@@ -148,7 +148,7 @@ class WaitingPrompt:
             if self.is_stale():
                 self.delete()
                 break
-            time.sleep(10)
+            time.sleep(600)
 
     def delete(self):
         for gen in self.processing_gens:
