@@ -146,6 +146,15 @@ class AsyncGeneratePrompt(Resource):
         return(wp.get_status(), 200)
 
 
+class AsyncCheck(Resource):
+    @logger.catch
+    def get(self, api_version = None, id = ''):
+        wp = _waiting_prompts.get_item(id)
+        if not wp:
+            return("ID not found", 404)
+        return(wp.get_lite_status(), 200)
+
+
 class AsyncGenerate(Resource):
     decorators = [limiter.limit("10/minute")]
     def post(self, api_version = None):
@@ -260,10 +269,10 @@ class SubmitGeneration(Resource):
             return(f"{get_error(ServerErrors.INVALID_API_KEY, subject = 'server submit: ' + args['name'])}",401)
         if user != procgen.server.user:
             return(f"{get_error(ServerErrors.WRONG_CREDENTIALS,kai_instance = args['name'], username = user.get_unique_alias())}",401)
-        chars = procgen.set_generation(args['generation'])
-        if chars == 0:
+        tokens = procgen.set_generation(args['generation'])
+        if tokens == 0:
             return(f"{get_error(ServerErrors.DUPLICATE_GEN,id = args['id'])}",400)
-        return({"reward": chars}, 200)
+        return({"reward": tokens}, 200)
 
 class TransferKudos(Resource):
     def post(self, api_version = None):
@@ -301,7 +310,7 @@ class Servers(Resource):
                 "model": server.model,
                 "max_length": server.max_length,
                 "max_content_length": server.max_content_length,
-                "chars_generated": server.contributions,
+                "tokens_generated": server.contributions,
                 "requests_fulfilled": server.fulfilments,
                 "kudos_rewards": server.kudos,
                 "kudos_details": server.kudos_details,
@@ -326,7 +335,7 @@ class ServerSingle(Resource):
                 "model": server.model,
                 "max_length": server.max_length,
                 "max_content_length": server.max_content_length,
-                "chars_generated": server.contributions,
+                "tokens_generated": server.contributions,
                 "requests_fulfilled": server.fulfilments,
                 "latest_performance": server.get_performance(),
             }
@@ -375,7 +384,7 @@ class HordeLoad(Resource):
     @logger.catch
     def get(self, api_version = None):
         load_dict = _waiting_prompts.count_totals()
-        load_dict["kilochars_per_min"] = _db.stats.get_kilochars_per_min()
+        load_dict["kilotokens_per_min"] = _db.stats.get_kilotokens_per_min()
         logger.debug(load_dict)
         return(load_dict,200)
 
@@ -396,14 +405,14 @@ def index():
         top_contributors = f"""\n## Top Contributors
 These are the people and servers who have contributed most to this horde.
 ### Users
-This is the person whose server(s) have generated the most chars for the horde.
+This is the person whose server(s) have generated the most tokens for the horde.
 #### {top_contributor.get_unique_alias()}
-* {top_contributor.contributions['chars']} chars generated.
+* {top_contributor.contributions['tokens']} tokens generated.
 * {top_contributor.contributions['fulfillments']} requests fulfilled.
 ### Servers
-This is the server which has generated the most chars for the horde.
+This is the server which has generated the most tokens for the horde.
 #### {top_server.name}
-* {top_server.contributions} chars generated.
+* {top_server.contributions} tokens generated.
 * {top_server.fulfilments} request fulfillments.
 * {top_server.get_human_readable_uptime()} uptime.
 
@@ -419,7 +428,7 @@ This is the server which has generated the most chars for the horde.
     findex = index.format(
         kobold_image = align_image,
         avg_performance= _db.stats.get_request_avg(),
-        total_chars = round(totals["chars"] / 1000000,2),
+        total_tokens = round(totals["tokens"] / 1000000,2),
         total_fulfillments = totals["fulfilments"],
         active_servers = _db.count_active_servers(),
         total_queue = _waiting_prompts.count_totals()["queued_requests"],
@@ -587,6 +596,7 @@ arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument('-i', '--insecure', action="store_true", help="If set, will use http instead of https (useful for testing)")
 arg_parser.add_argument('-v', '--verbosity', action='count', default=0, help="The default logging level is ERROR or higher. This value increases the amount of logging seen in your screen")
 arg_parser.add_argument('-q', '--quiet', action='count', default=0, help="The default logging level is ERROR or higher. This value decreases the amount of logging seen in your screen")
+arg_parser.add_argument('-c', '--convert_flag', action='store', default=None, required=False, type=str, help="A special flag to convert from previous DB entries to newer and exit")
 
 if __name__ == "__main__":
     global _db
@@ -598,7 +608,7 @@ if __name__ == "__main__":
     quiesce_logger(args.quiet)    
     # Only setting this for the WSGI logs
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(module)s:%(lineno)d - %(message)s',level=logging.ERROR)
-    _db = Database()
+    _db = Database(convert_flag=args.convert_flag)
     _waiting_prompts = PromptsIndex()
     _processing_generations = GenerationsIndex()
     google_client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -638,6 +648,7 @@ if __name__ == "__main__":
     api.add_resource(SyncGenerate, "/generate/sync","/api/<string:api_version>/generate/sync")
     api.add_resource(AsyncGenerate, "/generate/async","/api/<string:api_version>/generate/async")
     api.add_resource(AsyncGeneratePrompt, "/generate/prompt/<string:id>","/api/<string:api_version>/generate/prompt/<string:id>")
+    api.add_resource(AsyncCheck, "/generate/prompt/<string:id>","/api/<string:api_version>/generate/check/<string:id>")
     api.add_resource(PromptPop, "/generate/pop","/api/<string:api_version>/generate/pop")
     api.add_resource(SubmitGeneration, "/generate/submit","/api/<string:api_version>/generate/submit")
     api.add_resource(Users, "/users","/api/<string:api_version>/users")
