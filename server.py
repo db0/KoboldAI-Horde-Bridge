@@ -98,7 +98,7 @@ class SyncGenerate(Resource):
         if args['prompt'] == '':
             return(f"{get_error(ServerErrors.EMPTY_PROMPT, username = username)}",400)
         wp_count = _waiting_prompts.count_waiting_requests(user)
-        if wp_count >= 3:
+        if wp_count > user.max_concurrent_wps:
             return(f"{get_error(ServerErrors.TOO_MANY_PROMPTS, username = username, wp_count = wp_count)}",503)
         wp = WaitingPrompt(
             _db,
@@ -172,7 +172,7 @@ class AsyncGenerate(Resource):
         wp_count = _waiting_prompts.count_waiting_requests(user)
         if args['prompt'] == '':
             return(f"{get_error(ServerErrors.EMPTY_PROMPT, username = user.get_unique_alias())}",400)
-        if wp_count >= 3:
+        if wp_count > user.max_concurrent_wps:
             return(f"{get_error(ServerErrors.TOO_MANY_PROMPTS, username = user.get_unique_alias(), wp_count = wp_count)}",503)
         wp = WaitingPrompt(
             _db,

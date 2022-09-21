@@ -445,6 +445,7 @@ class User:
             "gifted": 0,
             "received": 0,
         }
+        self.max_concurrent_wps = 2
 
     def create_anon(self):
         self.username = 'Anonymous'
@@ -462,6 +463,9 @@ class User:
             "tokens": 0,
             "requests": 0
         }
+        # We allow anonymous users more leeway for the max amount of concurrent requests
+        # This is balanced by their lower priority
+        self.max_concurrent_wps = 30
 
     def create(self, username, oauth_id, api_key, invite_id):
         self.username = username
@@ -518,6 +522,7 @@ class User:
             "invite_id": self.invite_id,
             "contributions": self.contributions,
             "usage": self.usage,
+            "max_concurrent_wps": self.max_concurrent_wps,
             "creation_date": self.creation_date.strftime("%Y-%m-%d %H:%M:%S"),
             "last_active": self.last_active.strftime("%Y-%m-%d %H:%M:%S"),
         }
@@ -539,6 +544,9 @@ class User:
         if convert_flag == "to_tokens" and "chars" in self.usage:
             self.usage["tokens"] = round(self.usage["chars"] / 4)
             del self.usage["chars"]
+        self.max_concurrent_wps = saved_dict.get("max_concurrent_wps", 2)
+        if self.api_key == '0000000000':
+            self.max_concurrent_wps = 30
         self.creation_date = datetime.strptime(saved_dict["creation_date"],"%Y-%m-%d %H:%M:%S")
         self.last_active = datetime.strptime(saved_dict["last_active"],"%Y-%m-%d %H:%M:%S")
 
