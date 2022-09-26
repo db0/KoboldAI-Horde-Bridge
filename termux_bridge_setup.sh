@@ -1,6 +1,6 @@
 apt update
 termux-setup-storage
-apt -y install python openssh git
+yes | apt -y install python openssh git 
 git clone https://github.com/db0/KoboldAI-Horde.git ${HOME}/KoboldAI-Horde
 cd ${HOME}/KoboldAI-Horde
 pip install -r ${HOME}/KoboldAI-Horde/bridge_requirements.txt --user

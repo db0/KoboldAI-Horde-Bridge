@@ -109,13 +109,13 @@ Through Termux, you can run the bridge on your phone and connect it to a KAI Col
 * [Install Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) (Install F-Droid if you haven't already)
 * Open termux and type this script 
    ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/termux_bridge_setup.sh | bash
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/termux_bridge_setup.sh | sh
    ```
    This script might require your input a few times, such as approving access to your phone storage
 
 If this fails to download packages because of repository certificates, run `termux-change-repo` and select the "grimler" repo
 
-
+You can optionally pass 
 ## Windows/Linux
 
 * First clone this repo and then open a terminal/console and `cd` into it
