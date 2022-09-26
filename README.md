@@ -104,7 +104,7 @@ This repository comes with a little bridge script which you can run on your own 
 
 * First clone this repo and then open a terminal/console and `cd` into it
 * Make sure you have python3 installed
-* install the requirements with pip: `python -m pip install -r requirements.txt --user`
+* install the requirements with pip: `python -m pip install -r bridge_requirements.txt --user`
 * Copy clientData_template.py into clientData.py
 * Edit the clientData.py file and add your own username and password. The password is stored in plaintext for now, so don't reuse an existing one.
 * Edit the clientData.py file and add your KAI server. If it's a local instance, leave it as it is. If it's a remote instance, fill in the URL and port accordingly.
