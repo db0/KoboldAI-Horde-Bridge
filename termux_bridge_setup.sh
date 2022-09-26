@@ -1,4 +1,5 @@
 apt update
+apt upgrade
 yes | apt -y install python openssh git 
 git clone https://github.com/db0/KoboldAI-Horde.git ${HOME}/KoboldAI-Horde
 cd ${HOME}/KoboldAI-Horde
