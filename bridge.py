@@ -132,7 +132,18 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         if gen_req.status_code == 503:
             logger.debug(f'KAI instance {kai_url} Busy (attempt {loop_retry}). Will try again...')
             continue
-        current_generation = gen_req.json()["results"][0]["text"]
+        try:
+            req_json = gen_req.json()
+        except json.decoder.JSONDecodeError:
+            logger.error(f"Something went wrong when trying to generate on {kai_url}. Please check the health of the KAI worker. Retrying 10 seconds...")
+            time.sleep(interval)
+            continue
+        try:
+            current_generation = greq_json["results"][0]["text"]
+        except KeyError: 
+            logger.error(f"Unexpected response received from {kai_url}. Please check the health of the KAI worker. Retrying in 10 seconds...")
+            time.sleep(interval)
+            continue
         submit_dict = {
             "id": current_id,
             "generation": current_generation,
