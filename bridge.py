@@ -33,7 +33,7 @@ arg_parser.add_argument('--debug', action="store_true", default=False, help="Sho
 arg_parser.add_argument('--priority_usernames',type=str, action='append', required=False, help="Usernames which get priority use in this server. The owner's username is always in this list.")
 arg_parser.add_argument('-v', '--verbosity', action='count', default=0, help="The default logging level is ERROR or higher. This value increases the amount of logging seen in your screen")
 arg_parser.add_argument('-q', '--quiet', action='count', default=0, help="The default logging level is ERROR or higher. This value decreases the amount of logging seen in your screen")
-arg_parser.add_argument('--log_file', action='store', default=None, help="If specified will dump the log to the specified file")
+arg_parser.add_argument('--log_file', action='store_true', default=False, help="If specified will dump the log to the specified file")
 
 model = ''
 max_content_length = 1024
@@ -178,7 +178,8 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
 if __name__ == "__main__":
     args = arg_parser.parse_args()
     set_logger_verbosity(args.verbosity)
-    logger.add("koboldai_bridge_log.log", retention="7 days", level="warning")    # Automatically rotate too big file
+    if args.log_file:
+        logger.add("koboldai_bridge_log.log", retention="7 days", level="warning")    # Automatically rotate too big file
     quiesce_logger(args.quiet)
     # test_logger()
     api_key = args.api_key if args.api_key else cd.api_key
