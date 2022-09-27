@@ -111,11 +111,17 @@ Through Termux, you can run the bridge on your phone and connect it to a KAI Col
    ```bash
    curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/termux_bridge_setup.sh | sh
    ```
-   This script might require your input a few times, such as approving access to your phone storage
+* If the script fails, try to rerun it. Sometimes it needs two runs
+* cd to the new git directory `cd KoboldAI-Horde` if you're not in it already
+* You can start the bridge on two ways. 
+   * Edit clientData.py and add your KoboldAI Worker URL and your API key, then start the bridge with `python bridge.py -vv`
+   * Put the variables in the command line directly `python bridge.py -k https://YOUR_KAI_WORKER_URL_HERE -a YOUR_API_KEY_HERE -n "My Awesome Instance" -vv`
+* You can also combine the two, where you fill in your `clientData.py` with your API key and worker name, and then pass the URL on the command line if it changes every time.
 
-If this fails to download packages because of repository certificates, run `termux-change-repo` and select the "grimler" repo
+You should now be seeing logs from the bridge, showing you the status of its connection
+   
 
-You can optionally pass 
+
 ## Windows/Linux
 
 * First clone this repo and then open a terminal/console and `cd` into it
