@@ -109,7 +109,7 @@ Through Termux, you can run the bridge on your phone and connect it to a KAI Col
 * [Install Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) (Install F-Droid if you haven't already)
 * Open termux and type this script 
    ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/termux_bridge_setup.sh | sh
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup_termux.sh | sh
    ```
 * If the script fails, try to rerun it. Sometimes it needs two runs
 * cd to the new git directory `cd KoboldAI-Horde` if you're not in it already
@@ -120,6 +120,18 @@ Through Termux, you can run the bridge on your phone and connect it to a KAI Col
 
 You should now be seeing logs from the bridge, showing you the status of its connection
    
+## Windows
+
+1. Download git and install with all the defaults. Make sure it installs Git Bash
+2. Download python and install with all the defaults
+3. Open Git Bash and execute the below command
+   ```bash
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup_windows.sh | bash
+   ```
+   Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. Example
+   ```bash
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup_windows.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.colab.url.here"
+   ```
 
 
 ## Windows/Linux
