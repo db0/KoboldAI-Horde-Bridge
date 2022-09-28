@@ -113,8 +113,8 @@ Through Termux, you can run the bridge on your phone and connect it to a remote 
   
 ## Windows
 
-1. Download git and install with all the defaults. Make sure it installs Git Bash
-2. Download python and install with all the defaults. Make sure it adds it to your PATH variables.
+1. [Download git](https://gitforwindows.org/) and install with all the defaults. Make sure it installs Git Bash
+2. [Download python](https://www.python.org/downloads/windows/) and install with all the defaults. Make sure it adds it to your PATH variables.
 3. Open Git Bash and proceed with the "Install Bridge" section
 
 ## Linux
