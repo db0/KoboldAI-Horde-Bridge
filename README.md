@@ -104,7 +104,7 @@ This repository comes with a little bridge script which you can run on your own 
 
 ## Android/Termux
 
-Through Termux, you can run the bridge on your phone and connect it to a KAI Colab instance.
+Through Termux, you can run the bridge on your phone and connect it to a remote KoboldAI instance.
 
 * [Install Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) (Install F-Droid if you haven't already)
 * Open termux and type this script 
@@ -130,7 +130,7 @@ You should now be seeing logs from the bridge, showing you the status of its con
    ```
    Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. Example
    ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.colab.url.here"
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.remote.url.here"
    ```
 
 This will download and prepare to run the bridge. At the end it will print out a message on how to start it.
@@ -145,7 +145,7 @@ This will download and prepare to run the bridge. At the end it will print out a
    ```
    Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. Example
    ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.colab.url.here"
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.remote.url.here"
    ```
 
 This will download and prepare to run the bridge. At the end it will print out a message on how to start it.
@@ -156,7 +156,7 @@ This will download and prepare to run the bridge. At the end it will print out a
 Once the bridge is prepared for the first time, you need to do a few more steps:
 
 * Edit the clientData.py file and add your API Key that you received from https://koboldai.net/register
-* Edit the clientData.py file and add your KAI worker. If it's a local instance, leave it as it is. If it's a colab instance, fill in the URL and port accordingly.
+* Edit the clientData.py file and add your KAI worker. If it's a local instance, leave it as it is. If it's a remote Kobold AI instance, fill in the URL and port accordingly.
 * Go to your KAI with a browser and modify your KAI settings from the GUI so that the "Amount to Generate" and "Typical Sampling" are at the max values your KAI instance can handle. This doesn't mean all requests will use this amount. It just limits which requests your server will choose to fulfil.
 * Finally, run the script: `python bridge.py -vv` (or the `bridge_start.(bash|sh)` according to your OS)
    * Optionally, provide bridge arguments via command line. The args on the command line will override clientData.py vars, so you can use this to run multiple bridges from the same location. See `python bridge.py -h`
