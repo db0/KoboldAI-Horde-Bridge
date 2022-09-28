@@ -11,21 +11,21 @@ pip install -r ${HOME}/KoboldAI-Horde/bridge_requirements.txt --user
 cp ${HOME}/KoboldAI-Horde/clientData_template.py ${HOME}/KoboldAI-Horde/clientData.py 
 
 if [[ "$1" ]]; then
-    sed -i 's\0000000000\$1\g' clientData.py
+    sed -i "s/0000000000/$1/g" clientData.py
     echo "   INFO: API Key set to '$(tput setaf 5)$1$(tput setaf 7)'"
 else
     echo "   $(tput setaf 3)WARN: $(tput setaf 7)No API Provided. Please manually edit your clientData.py and add your API KEY in the 'api_key' variable."
 fi
 
 if [[ "$2" ]]; then
-    sed -i 's\My Awesome Instance\$2\g' clientData.py
+    sed -i "s/My Awesome Instance/$2/g" clientData.py
     echo "   INFO: Worker name set to $(tput setaf 5)$2$(tput setaf 7)'"
 else
     echo "   $(tput setaf 3)WARN: $(tput setaf 7)No Worker Name provided. Please manually edit your clientData.py and add your colab url in the 'kai_name' variable."
 fi
 
 if [[ "$3" ]]; then
-    sed -i 's\http://localhost:5000\$3\g' clientData.py
+    sed -i "s#http://localhost:5000#$3#g" clientData.py
     echo "   INFO: Worker url set to '$(tput setaf 5)$3$(tput setaf 7)'"
 else
     echo "   $(tput setaf 3)WARN: $(tput setaf 7)No Colab URL provided. Please manually edit your clientData.py and add your colab url in the 'kai_url' variable."

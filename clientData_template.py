@@ -2,7 +2,7 @@
 cluster_url = "http://koboldai.net"
 # Where can your bridge reach your KoboldAI Worker. 
 # If you're using a Google Colab, put the URL where you can reach your KoboldAI here.
-kai_url = "https://localhost:5000"
+kai_url = "http://localhost:5000"
 # Give a cool name to your worker
 kai_name = "My Awesome Instance"
 # The api_key identifies a unique user in the horde
