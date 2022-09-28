@@ -96,10 +96,6 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                 logger.warning(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                 time.sleep(10)
                 continue
-            except requests.exceptions.ReadTimeout:
-                logger.warning(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
-                time.sleep(10)
-                continue
             except requests.exceptions.JSONDecodeError():
                 logger.warning(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                 time.sleep(10)
@@ -125,7 +121,12 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         if requested_softprompt != current_softprompt:
             req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
             time.sleep(1) # Wait a second to unload the softprompt
-        gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload)
+        try:
+            gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload)
+        except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
+            logger.warning(f"Worker {kai_url} unavailable. Waiting 10 seconds...")
+            time.sleep(10)
+            continue
         if type(gen_req.json()) is not dict:
             logger.error(f'KAI instance {kai_url} API unexpected response on generate: {gen_req}. Sleeping 10 seconds...')
             time.sleep(9)
@@ -168,7 +169,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                 current_id = None
                 current_payload = None
                 current_generation = None
-            except requests.exceptions.ConnectionError:
+            except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 logger.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
                 time.sleep(10)
                 continue
