@@ -127,13 +127,13 @@ Through Termux, you can run the bridge on your phone and connect it to a remote 
 Run the below command
 
 ```bash
-curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash
+curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | sh
 ```
 
 Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. This will automatically setup your clientData.py so you don't have to manually edit after. Example:
 
 ```bash
-curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.remote.url.here"
+curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | sh -s - "1234567890" "The Chicken Circus" "https://your.remote.url.here"
 ```
 
 This will download and prepare to run the bridge. At the end it will print out a message on how to start it.
