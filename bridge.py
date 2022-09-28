@@ -187,7 +187,7 @@ if __name__ == "__main__":
     kai_url = args.kai_url if args.kai_url else cd.kai_url
     cluster = args.cluster_url if args.cluster_url else cd.cluster_url
     priority_usernames = args.priority_usernames if args.priority_usernames else cd.priority_usernames
-    logger.init(f"{kai_name} Instance", status="Starting")
+    logger.init(f"{kai_name} Instance", status="Started")
     try:
         bridge(args.interval, api_key, kai_name, kai_url, cluster, priority_usernames)
     except KeyboardInterrupt:
