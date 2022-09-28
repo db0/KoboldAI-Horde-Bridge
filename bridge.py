@@ -93,7 +93,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             try:
                 pop_req = requests.post(cluster + '/api/v1/generate/pop', json = gen_dict)
             except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-                logger.warning(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
+                logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                 time.sleep(10)
                 continue
             except requests.exceptions.JSONDecodeError():
@@ -124,7 +124,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         try:
             gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload)
         except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-            logger.warning(f"Worker {kai_url} unavailable. Waiting 10 seconds...")
+            logger.error(f"Worker {kai_url} unavailable. Waiting 10 seconds...")
             time.sleep(10)
             continue
         if type(gen_req.json()) is not dict:
@@ -170,7 +170,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                 current_payload = None
                 current_generation = None
             except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-                logger.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
+                error.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
                 time.sleep(10)
                 continue
         time.sleep(interval)
