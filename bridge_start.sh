@@ -1,0 +1,1 @@
+python bridge.py -vv "$@"

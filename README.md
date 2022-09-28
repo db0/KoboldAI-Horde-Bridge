@@ -109,7 +109,7 @@ Through Termux, you can run the bridge on your phone and connect it to a KAI Col
 * [Install Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) (Install F-Droid if you haven't already)
 * Open termux and type this script 
    ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup_termux.sh | sh
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | sh
    ```
 * If the script fails, try to rerun it. Sometimes it needs two runs
 * cd to the new git directory `cd KoboldAI-Horde` if you're not in it already
@@ -126,29 +126,44 @@ You should now be seeing logs from the bridge, showing you the status of its con
 2. Download python and install with all the defaults
 3. Open Git Bash and execute the below command
    ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup_windows.sh | bash
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash
    ```
    Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. Example
    ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup_windows.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.colab.url.here"
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.colab.url.here"
    ```
 
+This will download and prepare to run the bridge. At the end it will print out a message on how to start it.
 
-## Windows/Linux
 
-* First clone this repo and then open a terminal/console and `cd` into it
-* Make sure you have python3 installed
-* install the requirements with pip: `python -m pip install -r bridge_requirements.txt --user`
-* Copy clientData_template.py into clientData.py
-* Edit the clientData.py file and add your own username and password. The password is stored in plaintext for now, so don't reuse an existing one.
-* Edit the clientData.py file and add your KAI server. If it's a local instance, leave it as it is. If it's a remote instance, fill in the URL and port accordingly.
-* Modify your KAI settings from the GUI so that the "Amount to Generate" and "Typical Sampling" are at the max values your KAI instance can handle. This doesn't mean all requests will use this amount. It just limits which requests your server will choose to fulfil.
-* Finally, run the script: `python bridge.py`
+## Linux
+
+1. Ensure `git` is installed with your package manager
+3. Open a terminal and execute the below command
+   ```bash
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash
+   ```
+   Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. Example
+   ```bash
+   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.colab.url.here"
+   ```
+
+This will download and prepare to run the bridge. At the end it will print out a message on how to start it.
+
+
+## More info
+
+Once the bridge is prepared for the first time, you need to do a few more steps:
+
+* Edit the clientData.py file and add your API Key that you received from https://koboldai.net/register
+* Edit the clientData.py file and add your KAI worker. If it's a local instance, leave it as it is. If it's a colab instance, fill in the URL and port accordingly.
+* Go to your KAI with a browser and modify your KAI settings from the GUI so that the "Amount to Generate" and "Typical Sampling" are at the max values your KAI instance can handle. This doesn't mean all requests will use this amount. It just limits which requests your server will choose to fulfil.
+* Finally, run the script: `python bridge.py -vv` (or the `bridge_start.(bash|sh)` according to your OS)
    * Optionally, provide bridge arguments via command line. The args on the command line will override clientData.py vars, so you can use this to run multiple bridges from the same location. See `python bridge.py -h`
 
-If all goes well, it will connect to your KAI instance and then will start polling the cluster for incoming requests.
+If all goes well, it will connect to your KAI worker and then will start polling the horde for incoming requests.
 
-A server will be considered "stale" and not shown in the general list, if it doesn't check in for at least 5 minutes. You can see still them through their individual UUID endpoint, and it will continue where it left off as soon as it checks back in to fulfil requests. In fact, it doesn't technically need to be the same server. You can switch to a different box and long as your server name and auth is the same, your stats will carry on. This means that you can keep plugging in different collab instances while retaining the same stats.
+A worker will be considered "stale" and not shown in the general list, if it doesn't check in for at least 5 minutes. You can see still them through their individual UUID endpoint, and it will continue where it left off as soon as it checks back in to fulfil requests. In fact, it doesn't technically need to be the same worker. You can switch to a different box and long as your worker name and auth is the same, your stats will carry on. This means that you can keep plugging in different collab instances while retaining the same stats.
 
 ## Softprompts
 

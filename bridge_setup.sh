@@ -1,3 +1,10 @@
+# Termux stuff
+if [[ $(uname -o) == "Android" ]]; then 
+    apt update
+    yes | apt -y upgrade
+    yes | apt -y install python openssh git 
+fi
+
 git clone https://github.com/db0/KoboldAI-Horde.git ${HOME}/KoboldAI-Horde
 cd ${HOME}/KoboldAI-Horde
 pip install -r ${HOME}/KoboldAI-Horde/bridge_requirements.txt --user
@@ -27,4 +34,10 @@ fi
 
 echo "## Bridge prepared. If you haven't already, edit clientData.py and add your own settings."
 echo "## Start the bridge with: $(tput setaf 6)cd ${HOME}/KoboldAI-Horde && python bridge.py -vv"
-echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
+if [[ $(uname -o) == "Msys" ]]; then 
+    echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
+else
+    chmod +x ${HOME}/KoboldAI-Horde/bridge_start.sh
+    echo "$(tput setaf 7)## Or from file explorer, navigate to $(tput setaf 6)${HOME}/KoboldAI-Horde $(tput setaf 7)and run $(tput setaf 6)bridge_start.sh"
+fi
+
