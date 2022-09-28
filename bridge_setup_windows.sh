@@ -27,4 +27,4 @@ fi
 
 echo "## Bridge prepared. If you haven't already, edit clientData.py and add your own settings."
 echo "## Start the bridge with: $(tput setaf 6)cd ${HOME}/KoboldAI-Horde && python bridge.py -vv"
-echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami) $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
+echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
