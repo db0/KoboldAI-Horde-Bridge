@@ -108,7 +108,7 @@ We provide a simple bridge preparation script for all operating systems.
 
 Through Termux, you can run the bridge on your phone and connect it to a remote KoboldAI instance.
 
-* [Install Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) (Install F-Droid if you haven't already)
+* [Install Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) if you haven't already
 * Open termux and proceed with the "Install Bridge" section
   
 ## Windows
