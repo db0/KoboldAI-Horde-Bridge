@@ -192,6 +192,6 @@ if __name__ == "__main__":
         bridge(args.interval, api_key, kai_name, kai_url, cluster, priority_usernames)
     except KeyboardInterrupt:
         logger.info(f"Keyboard Interrupt Received. Ending Process")
-    logger.init(f"{kai_name} Instance", status="Stopping")
+    logger.init(f"{kai_name} Instance", status="Stopped")
 
 
