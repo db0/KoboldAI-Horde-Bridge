@@ -98,60 +98,45 @@ Once the KAI starts in cluster mode, any request will be sent to the cluster
 
 # Joining the horde
 
-This repository comes with a little bridge script which you can run on your own machine (windows or linux). It will take care of communicating between KAI cluster server and your own KAI. This will allow people to use their own PCs to support the KAI cluster.
+This repository comes with a little bridge script which you can run on your own machine (windows or linux). It will take care of communicating between the KoboldAI Horde and your own KAI Worker. This will allow people to use their own PCs to support the KAI horde.
 
 **You KoboldAI instance must be using the UNITED branch!**
+
+We provide a simple bridge preparation script for all operating systems. 
 
 ## Android/Termux
 
 Through Termux, you can run the bridge on your phone and connect it to a remote KoboldAI instance.
 
 * [Install Termux from F-Droid](https://f-droid.org/en/packages/com.termux/) (Install F-Droid if you haven't already)
-* Open termux and type this script 
-   ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | sh
-   ```
-* If the script fails, try to rerun it. Sometimes it needs two runs
-* cd to the new git directory `cd KoboldAI-Horde` if you're not in it already
-* You can start the bridge on two ways. 
-   * Edit clientData.py and add your KoboldAI Worker URL and your API key, then start the bridge with `python bridge.py -vv`
-   * Put the variables in the command line directly `python bridge.py -k https://YOUR_KAI_WORKER_URL_HERE -a YOUR_API_KEY_HERE -n "My Awesome Instance" -vv`
-* You can also combine the two, where you fill in your `clientData.py` with your API key and worker name, and then pass the URL on the command line if it changes every time.
-
-You should now be seeing logs from the bridge, showing you the status of its connection
-   
+* Open termux and proceed with the "Install Bridge" section
+  
 ## Windows
 
 1. Download git and install with all the defaults. Make sure it installs Git Bash
 2. Download python and install with all the defaults
-3. Open Git Bash and execute the below command
-   ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash
-   ```
-   Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. Example
-   ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.remote.url.here"
-   ```
-
-This will download and prepare to run the bridge. At the end it will print out a message on how to start it.
-
+3. Open Git Bash and proceed with the "Install Bridge" section
 
 ## Linux
 
 1. Ensure `git` is installed with your package manager
-3. Open a terminal and execute the below command
-   ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash
-   ```
-   Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. Example
-   ```bash
-   curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.remote.url.here"
-   ```
+3. Open a terminal and proceed with the "Install Bridge" section
+
+## Install Bridge
+
+Run the below command
+
+```bash
+curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash
+```
+
+Optionally you can pass command line variables to this command with your API KEY, your Worker name and your KAI Worker URL in that order. This will automatically setup your clientData.py so you don't have to manually edit after. Example:
+
+```bash
+curl https://raw.githubusercontent.com/db0/KoboldAI-Horde/master/bridge_setup.sh | bash -s - "1234567890" "The Chicken Circus" "https://your.remote.url.here"
+```
 
 This will download and prepare to run the bridge. At the end it will print out a message on how to start it.
-
-
-## More info
 
 Once the bridge is prepared for the first time, you need to do a few more steps:
 
