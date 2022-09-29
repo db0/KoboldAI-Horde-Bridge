@@ -3,6 +3,8 @@
 This turns KoboldAI into a giant crowdsourced distributed cluster. It allows people without a powerful GPU to use KAI by relying on spare/idle resources provided by the community.
 It also allows clients other than KAI, such as games and apps, to use KAI-provided generations.
 
+![Architecture diagram of Kobold AI Horde. Clients submit text generation requests to a Horde server from Kobold AI, which forwards the generation request to a horde member that is running the specified model. The response from the horde member is returned back to the requesting client.](horde-architecture.png)
+
 You can find visit [official KoboldAI Horde](https://koboldai.net)
 
 # Registering
