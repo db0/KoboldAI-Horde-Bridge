@@ -1,4 +1,4 @@
-import requests, json, os, time, argparse
+import requests, json, os, time, argparse, urllib3
 from logger import logger, set_logger_verbosity, quiesce_logger, test_logger
 
 import random
@@ -92,7 +92,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         else:
             try:
                 pop_req = requests.post(cluster + '/api/v1/generate/pop', json = gen_dict)
-            except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
+            except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                 time.sleep(10)
                 continue
@@ -169,7 +169,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                 current_id = None
                 current_payload = None
                 current_generation = None
-            except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
+            except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 error.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
                 time.sleep(10)
                 continue

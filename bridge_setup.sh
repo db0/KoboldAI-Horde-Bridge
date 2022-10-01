@@ -5,10 +5,10 @@ if [[ $(uname -o) == "Android" ]]; then
     yes | apt -y install python openssh git 
 fi
 
-git clone https://github.com/db0/KoboldAI-Horde.git ${HOME}/KoboldAI-Horde
-cd ${HOME}/KoboldAI-Horde
-pip install -r ${HOME}/KoboldAI-Horde/bridge_requirements.txt --user
-cp ${HOME}/KoboldAI-Horde/clientData_template.py ${HOME}/KoboldAI-Horde/clientData.py 
+git clone https://github.com/db0/KoboldAI-Horde-Bridge.git ${HOME}/KoboldAI-Horde-Bridge
+cd ${HOME}/KoboldAI-Horde-Bridge
+pip install -r ${HOME}/KoboldAI-Horde-Bridge/requirements.txt --user
+cp ${HOME}/KoboldAI-Horde-Bridge/clientData_template.py ${HOME}/KoboldAI-Horde-Bridge/clientData.py 
 
 if [[ "$1" ]]; then
     sed -i "s/0000000000/$1/g" clientData.py
@@ -33,11 +33,11 @@ fi
 
 
 echo "## Bridge prepared. If you haven't already, edit clientData.py and add your own settings."
-echo "## Start the bridge with: $(tput setaf 6)cd ${HOME}/KoboldAI-Horde && python bridge.py -vv"
+echo "## Start the bridge with: $(tput setaf 6)cd ${HOME}/KoboldAI-Horde-Bridge && python bridge.py -vv"
 if [[ $(uname -o) == "Msys" ]]; then 
-    echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
+    echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
 else
-    chmod +x ${HOME}/KoboldAI-Horde/bridge_start.sh
-    echo "$(tput setaf 7)## Or from file explorer, navigate to $(tput setaf 6)${HOME}/KoboldAI-Horde $(tput setaf 7)and run $(tput setaf 6)bridge_start.sh"
+    chmod +x ${HOME}/KoboldAI-Horde-Bridge/bridge_start.sh
+    echo "$(tput setaf 7)## Or from file explorer, navigate to $(tput setaf 6)${HOME}/KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.sh"
 fi
 
