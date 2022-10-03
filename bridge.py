@@ -73,6 +73,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
     current_id = None
     current_payload = None
     loop_retry = 0
+    failed_requests_in_a_row = 0
     while True:
         if not validate_kai(kai_url):
             logger.warning(f"Waiting 10 seconds...")
@@ -143,7 +144,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         try:
             current_generation = req_json["results"][0]["text"]
         except KeyError: 
-            logger.error(f"Unexpected response received from {kai_url}. Please check the health of the KAI worker. Retrying in 10 seconds...")
+            logger.error(f"Unexpected response received from {kai_url}: {req_json}. Please check the health of the KAI worker. Retrying in 10 seconds...")
             time.sleep(interval)
             continue
         submit_dict = {
@@ -166,13 +167,27 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                         continue
                 else:
                     logger.info(f'Submitted generation with id {current_id} and contributed for {submit_req.json()["reward"]}')
+                    failed_requests_in_a_row = 0
                 current_id = None
                 current_payload = None
                 current_generation = None
+                loop_retry = 0
             except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 error.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
                 time.sleep(10)
                 continue
+        if loop_retry > 3 and current_id:
+            logger.error(f"Exceeded retry count {loop_retry} for generation id {current_id}. Aborting generation!")
+            current_id = None
+            current_payload = None
+            current_generation = None
+            loop_retry = 0
+            failed_requests_in_a_row += 1
+            if failed_requests_in_a_row > 3:
+                logger.error(f"{failed_requests_in_a_row} Requests failed in a row. Crashing bridge!")
+                return
+        elif current_id:
+            logger.debug(f"Retrying ({loop_retry}/10) for generation id {current_id}...")
         time.sleep(interval)
 
 
