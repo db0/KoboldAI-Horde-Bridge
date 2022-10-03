@@ -126,25 +126,30 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload)
         except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
             logger.error(f"Worker {kai_url} unavailable. Waiting 10 seconds...")
+            loop_retry += 1
             time.sleep(10)
             continue
         if type(gen_req.json()) is not dict:
             logger.error(f'KAI instance {kai_url} API unexpected response on generate: {gen_req}. Sleeping 10 seconds...')
             time.sleep(9)
+            loop_retry += 1
             continue
         if gen_req.status_code == 503:
             logger.debug(f'KAI instance {kai_url} Busy (attempt {loop_retry}). Will try again...')
+            loop_retry += 1
             continue
         try:
             req_json = gen_req.json()
         except json.decoder.JSONDecodeError:
             logger.error(f"Something went wrong when trying to generate on {kai_url}. Please check the health of the KAI worker. Retrying 10 seconds...")
+            loop_retry += 1
             time.sleep(interval)
             continue
         try:
             current_generation = req_json["results"][0]["text"]
         except KeyError: 
             logger.error(f"Unexpected response received from {kai_url}: {req_json}. Please check the health of the KAI worker. Retrying in 10 seconds...")
+            loop_retry += 1
             time.sleep(interval)
             continue
         submit_dict = {
@@ -163,6 +168,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                     else:
                         logger.error(submit_req.status_code)
                         logger.warning(f"During gen submit, server {cluster} responded: {submit_req.text}. Waiting for 10 seconds...")
+                        loop_retry += 1
                         time.sleep(10)
                         continue
                 else:
@@ -174,6 +180,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                 loop_retry = 0
             except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 error.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
+                loop_retry += 1
                 time.sleep(10)
                 continue
         if loop_retry > 3 and current_id:
