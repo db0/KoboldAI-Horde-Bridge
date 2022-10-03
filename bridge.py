@@ -161,6 +161,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             current_generation = req_json["results"][0]["text"]
         except KeyError: 
             logger.error(f"Unexpected response received from {kai_url}: {req_json}. Please check the health of the KAI worker. Retrying in 10 seconds...")
+            logger.debug(current_payload)
             loop_retry += 1
             time.sleep(interval)
             continue
