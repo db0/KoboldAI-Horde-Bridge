@@ -91,8 +91,8 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             logger.warning(f"Waiting 10 seconds...")
             time.sleep(10)
             continue
-        headers = {"apikey": api_key}
         gen_dict = {
+            "api_key": api_key,
             "name": kai_name,
             "model": model,
             "max_length": max_length,
@@ -104,7 +104,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             loop_retry += 1
         else:
             try:
-                pop_req = requests.post(cluster + '/api/v2/generate/pop', json = gen_dict, headers = headers)
+                pop_req = requests.post(cluster + '/api/v1/generate/pop', json = gen_dict)
             except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                 time.sleep(10)
@@ -128,9 +128,16 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
                 continue
             current_id = pop['id']
             current_payload = pop['payload']
+            if 'width' in current_payload or 'length' in current_payload or 'steps' in current_payload:
+                logger.warning(f"Stable Horde payload detected: {current_payload}. Aborting ")
+                current_id = None
+                current_payload = None
+                current_generation = None
+                loop_retry = 0
+                continue
             # By default, we don't want to be annoucing the prompt send from the Horde to the terminal
             current_payload['quiet'] = True
-            requested_softprompt = pop.get('softprompt', '')
+            requested_softprompt = pop['softprompt']
         if requested_softprompt != current_softprompt:
             req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
             time.sleep(1) # Wait a second to unload the softprompt
@@ -168,10 +175,11 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         submit_dict = {
             "id": current_id,
             "generation": current_generation,
+            "api_key": api_key,
         }
         while current_id and current_generation:
             try:
-                submit_req = requests.post(cluster + '/api/v2/generate/submit', json = submit_dict, headers=headers)
+                submit_req = requests.post(cluster + '/api/v1/generate/submit', json = submit_dict)
                 if submit_req.status_code == 404:
                     logger.warning(f"The generation we were working on got stale. Aborting!")
                 elif not submit_req.ok:
