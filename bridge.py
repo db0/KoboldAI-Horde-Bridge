@@ -130,7 +130,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             current_payload = pop['payload']
             # By default, we don't want to be annoucing the prompt send from the Horde to the terminal
             current_payload['quiet'] = True
-            requested_softprompt = pop['softprompt']
+            requested_softprompt = pop.get('softprompt', '')
         if requested_softprompt != current_softprompt:
             req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
             time.sleep(1) # Wait a second to unload the softprompt
