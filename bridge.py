@@ -91,8 +91,8 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             logger.warning(f"Waiting 10 seconds...")
             time.sleep(10)
             continue
+        headers = {"apikey": api_key}
         gen_dict = {
-            "api_key": api_key,
             "name": kai_name,
             "model": model,
             "max_length": max_length,
@@ -104,7 +104,7 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
             loop_retry += 1
         else:
             try:
-                pop_req = requests.post(cluster + '/api/v1/generate/pop', json = gen_dict)
+                pop_req = requests.post(cluster + '/api/v2/generate/pop', json = gen_dict, headers = headers)
             except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                 time.sleep(10)
@@ -175,11 +175,10 @@ def bridge(interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         submit_dict = {
             "id": current_id,
             "generation": current_generation,
-            "api_key": api_key,
         }
         while current_id and current_generation:
             try:
-                submit_req = requests.post(cluster + '/api/v1/generate/submit', json = submit_dict)
+                submit_req = requests.post(cluster + '/api/v2/generate/submit', json = submit_dict, headers = headers)
                 if submit_req.status_code == 404:
                     logger.warning(f"The generation we were working on got stale. Aborting!")
                 elif not submit_req.ok:
