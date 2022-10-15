@@ -35,7 +35,7 @@ fi
 echo "## Bridge prepared. If you haven't already, edit clientData.py and add your own settings."
 echo "## Start the bridge with: $(tput setaf 6)cd ${HOME}/KoboldAI-Horde-Bridge && python bridge.py -vv"
 if [[ $(uname -o) == "Msys" ]]; then 
-    echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
+    echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat$(tput setaf 7)"
 else
     chmod +x ${HOME}/KoboldAI-Horde-Bridge/bridge_start.sh
     echo "$(tput setaf 7)## Or from file explorer, navigate to $(tput setaf 6)${HOME}/KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.sh$(tput setaf 7)"
