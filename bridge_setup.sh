@@ -38,6 +38,6 @@ if [[ $(uname -o) == "Msys" ]]; then
     echo "$(tput setaf 7)## Or from windows explorer, navigate to $(tput setaf 6)C:\\Users\\$(whoami)\KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.bat"
 else
     chmod +x ${HOME}/KoboldAI-Horde-Bridge/bridge_start.sh
-    echo "$(tput setaf 7)## Or from file explorer, navigate to $(tput setaf 6)${HOME}/KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.sh"
+    echo "$(tput setaf 7)## Or from file explorer, navigate to $(tput setaf 6)${HOME}/KoboldAI-Horde-Bridge $(tput setaf 7)and run $(tput setaf 6)bridge_start.sh$(tput setaf 7)"
 fi
 
