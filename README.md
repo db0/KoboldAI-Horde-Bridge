@@ -4,8 +4,6 @@ This software enables you to join your KoboldAI client to the [KoboldAI Horde](h
 
 This repository contains a little bridge script which you can run on your own machine (windows or linux). It will take care of communicating between the KoboldAI Horde and your own KAI Worker. This will allow people to use their own PCs to support the KAI horde.
 
-**You KoboldAI instance must be using the UNITED branch!**
-
 We provide a simple bridge preparation script for all operating systems. 
 
 ## Android/Termux
