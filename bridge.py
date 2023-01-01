@@ -188,7 +188,7 @@ class kai_bridge():
                     current_generation = None
                     loop_retry = 0
                 except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-                    error.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
+                    logger.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
                     loop_retry += 1
                     time.sleep(10)
                     continue
