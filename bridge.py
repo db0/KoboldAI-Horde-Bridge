@@ -9,7 +9,7 @@ except:
         def __init__(self):
             random.seed()
             # The cluster url
-            self.cluster_url = "http://koboldai.net"
+            self.cluster_url = "https://koboldai.net"
             # Where can your bridge reach your KAI instance
             self.kai_url = "http://localhost:5000"
             # Give a cool name to your instance
