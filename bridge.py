@@ -125,6 +125,7 @@ class kai_bridge():
                     current_id = None
                     current_payload = None
                     current_generation = None
+                    return_error = None
                     loop_retry = 0
                     continue
                 # By default, we don't want to be annoucing the prompt send from the Horde to the terminal
@@ -197,6 +198,7 @@ class kai_bridge():
                     current_id = None
                     current_payload = None
                     current_generation = None
+                    return_error = None
                     loop_retry = 0
                 except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                     error.warning(f"Server {cluster} unavailable during submit. Waiting 10 seconds...")
