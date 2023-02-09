@@ -62,6 +62,7 @@ class kai_bridge():
     def bridge(self, interval, api_key, kai_name, kai_url, cluster, priority_usernames):
         current_id = None
         current_payload = None
+        return_error = None
         loop_retry = 0
         failed_requests_in_a_row = 0
         while self.run:
