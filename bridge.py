@@ -70,6 +70,7 @@ class kai_bridge():
                 current_id = None
                 current_payload = None
                 current_generation = None
+                return_error = None
                 loop_retry = 0
                 failed_requests_in_a_row += 1
                 if failed_requests_in_a_row > 3:
@@ -147,25 +148,34 @@ class kai_bridge():
                 logger.debug(f'KAI instance {kai_url} Busy (attempt {loop_retry}). Will try again...')
                 loop_retry += 1
                 continue
-            try:
-                req_json = gen_req.json()
-            except json.decoder.JSONDecodeError:
-                logger.error(f"Something went wrong when trying to generate on {kai_url}. Please check the health of the KAI worker. Retrying 10 seconds...")
-                loop_retry += 1
-                time.sleep(interval)
-                continue
-            try:
-                current_generation = req_json["results"][0]["text"]
-            except KeyError:
-                logger.error(f"Unexpected response received from {kai_url}: {req_json}. Please check the health of the KAI worker. Retrying in 10 seconds...")
-                logger.debug(current_payload)
-                loop_retry += 1
-                time.sleep(interval)
-                continue
-            submit_dict = {
-                "id": current_id,
-                "generation": current_generation,
-            }
+            if gen_req.status_code == 422:
+                logger.debug(f'KAI instance {kai_url} reported validation error. Returning as error.')
+                return_error = "payload validation error"
+            if return_error:
+                submit_dict = {
+                    "id": current_id,
+                    "generation": return_error,
+                }
+            else:
+                try:
+                    req_json = gen_req.json()
+                except json.decoder.JSONDecodeError:
+                    logger.error(f"Something went wrong when trying to generate on {kai_url}. Please check the health of the KAI worker. Retrying 10 seconds...")
+                    loop_retry += 1
+                    time.sleep(interval)
+                    continue
+                try:
+                    current_generation = req_json["results"][0]["text"]
+                except KeyError:
+                    logger.error(f"Unexpected response received from {kai_url}: {req_json}. Please check the health of the KAI worker. Retrying in 10 seconds...")
+                    logger.debug(current_payload)
+                    loop_retry += 1
+                    time.sleep(interval)
+                    continue
+                submit_dict = {
+                    "id": current_id,
+                    "generation": current_generation,
+                }
             while current_id and current_generation:
                 try:
                     submit_req = requests.post(cluster + '/api/v2/generate/submit', json = submit_dict, headers = headers)
