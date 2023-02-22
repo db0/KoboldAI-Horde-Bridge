@@ -41,6 +41,9 @@ class kai_bridge():
         try:
             req = requests.get(kai + '/api/latest/model')
             self.model = req.json()["result"]
+            # Normalize huggingface and local downloaded model names
+            if "/" not in self.model:
+                self.model = self.model.replace('_', '/', 1)
             req = requests.get(kai + '/api/latest/config/max_context_length')
             self.max_content_length = req.json()["value"]
             req = requests.get(kai + '/api/latest/config/max_length')
