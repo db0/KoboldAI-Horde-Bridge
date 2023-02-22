@@ -2,6 +2,7 @@ import requests, json, os, time, argparse, urllib3
 from logger import logger, set_logger_verbosity, quiesce_logger, test_logger
 
 import random
+
 try:
     import clientData as cd
 except:
@@ -86,14 +87,16 @@ class kai_bridge():
                 logger.warning(f"Waiting 10 seconds...")
                 time.sleep(10)
                 continue
+            self.BRIDGE_AGENT = f"KoboldAI Bridge:10:https://github.com/db0/KoboldAI-Horde-Bridge"
             headers = {"apikey": api_key}
             gen_dict = {
                 "name": kai_name,
-                "model": self.model,
+                "models": [self.model],
                 "max_length": self.max_length,
                 "max_content_length": self.max_content_length,
                 "priority_usernames": priority_usernames,
                 "softprompts": self.softprompts[self.model],
+                "bridge_agent": self.BRIDGE_AGENT,
             }
             if current_id:
                 loop_retry += 1
@@ -183,7 +186,7 @@ class kai_bridge():
                 }
             while current_id and current_generation:
                 try:
-                    submit_req = requests.post(cluster + '/api/v2/text/generate/submit', json = submit_dict, headers = headers)
+                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
                     if submit_req.status_code == 404:
                         logger.warning(f"The generation we were working on got stale. Aborting!")
                     elif not submit_req.ok:
