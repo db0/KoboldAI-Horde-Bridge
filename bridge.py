@@ -96,7 +96,7 @@ class kai_bridge():
                 loop_retry += 1
             else:
                 try:
-                    pop_req = requests.post(cluster + '/api/v2/generate/pop', json = gen_dict, headers = headers)
+                    pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers)
                 except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                     logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                     time.sleep(10)
@@ -180,7 +180,7 @@ class kai_bridge():
                 }
             while current_id and current_generation:
                 try:
-                    submit_req = requests.post(cluster + '/api/v2/generate/submit', json = submit_dict, headers = headers)
+                    submit_req = requests.post(cluster + '/api/v2/text/generate/submit', json = submit_dict, headers = headers)
                     if submit_req.status_code == 404:
                         logger.warning(f"The generation we were working on got stale. Aborting!")
                     elif not submit_req.ok:
