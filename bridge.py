@@ -28,7 +28,7 @@ except:
 class kai_bridge():
     def __init__(self):
         self.model = ''
-        self.max_content_length = 1024
+        self.max_context_length = 1024
         self.max_length = 80
         self.current_softprompt = None
         self.softprompts = {}
@@ -46,7 +46,7 @@ class kai_bridge():
             if "/" not in self.model:
                 self.model = self.model.replace('_', '/', 1)
             req = requests.get(kai + '/api/latest/config/max_context_length')
-            self.max_content_length = req.json()["value"]
+            self.max_context_length = req.json()["value"]
             req = requests.get(kai + '/api/latest/config/max_length')
             self.max_length = req.json()["value"]
             if self.model not in self.softprompts:
@@ -93,7 +93,7 @@ class kai_bridge():
                 "name": kai_name,
                 "models": [self.model],
                 "max_length": self.max_length,
-                "max_content_length": self.max_content_length,
+                "max_context_length": self.max_context_length,
                 "priority_usernames": priority_usernames,
                 "softprompts": self.softprompts[self.model],
                 "bridge_agent": self.BRIDGE_AGENT,
