@@ -2,6 +2,7 @@ import requests, json, os, time, argparse, urllib3
 from logger import logger, set_logger_verbosity, quiesce_logger, test_logger
 
 import random
+
 try:
     import clientData as cd
 except:
@@ -9,7 +10,7 @@ except:
         def __init__(self):
             random.seed()
             # The cluster url
-            self.cluster_url = "http://koboldai.net"
+            self.cluster_url = "https://stablehorde.net"
             # Where can your bridge reach your KAI instance
             self.kai_url = "http://localhost:5000"
             # Give a cool name to your instance
@@ -27,7 +28,7 @@ except:
 class kai_bridge():
     def __init__(self):
         self.model = ''
-        self.max_content_length = 1024
+        self.max_context_length = 1024
         self.max_length = 80
         self.current_softprompt = None
         self.softprompts = {}
@@ -41,8 +42,11 @@ class kai_bridge():
         try:
             req = requests.get(kai + '/api/latest/model')
             self.model = req.json()["result"]
+            # Normalize huggingface and local downloaded model names
+            if "/" not in self.model:
+                self.model = self.model.replace('_', '/', 1)
             req = requests.get(kai + '/api/latest/config/max_context_length')
-            self.max_content_length = req.json()["value"]
+            self.max_context_length = req.json()["value"]
             req = requests.get(kai + '/api/latest/config/max_length')
             self.max_length = req.json()["value"]
             if self.model not in self.softprompts:
@@ -65,6 +69,8 @@ class kai_bridge():
         return_error = None
         loop_retry = 0
         failed_requests_in_a_row = 0
+        self.BRIDGE_AGENT = f"KoboldAI Bridge:10:https://github.com/db0/KoboldAI-Horde-Bridge"
+        headers = {"apikey": api_key}
         while self.run:
             if loop_retry > 3 and current_id:
                 logger.error(f"Exceeded retry count {loop_retry} for generation id {current_id}. Aborting generation!")
@@ -73,6 +79,15 @@ class kai_bridge():
                 current_generation = None
                 return_error = None
                 loop_retry = 0
+                submit_dict = {
+                    "id": current_id,
+                    "state": "faulted",
+                    "generation": "faulted",
+                    "seed": -1,
+                }
+                submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
+                if submit_req.status_code == 404:
+                    logger.warning(f"The generation we were working on got stale. Aborting!")
                 failed_requests_in_a_row += 1
                 if failed_requests_in_a_row > 3:
                     logger.error(f"{failed_requests_in_a_row} Requests failed in a row. Crashing bridge!")
@@ -83,20 +98,20 @@ class kai_bridge():
                 logger.warning(f"Waiting 10 seconds...")
                 time.sleep(10)
                 continue
-            headers = {"apikey": api_key}
             gen_dict = {
                 "name": kai_name,
-                "model": self.model,
+                "models": [self.model],
                 "max_length": self.max_length,
-                "max_content_length": self.max_content_length,
+                "max_context_length": self.max_context_length,
                 "priority_usernames": priority_usernames,
                 "softprompts": self.softprompts[self.model],
+                "bridge_agent": self.BRIDGE_AGENT,
             }
             if current_id:
                 loop_retry += 1
             else:
                 try:
-                    pop_req = requests.post(cluster + '/api/v2/generate/pop', json = gen_dict, headers = headers)
+                    pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers)
                 except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                     logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                     time.sleep(10)
@@ -131,6 +146,7 @@ class kai_bridge():
                 # By default, we don't want to be annoucing the prompt send from the Horde to the terminal
                 current_payload['quiet'] = True
                 requested_softprompt = pop['softprompt']
+            logger.info("Job received. Starting generation...")
             if requested_softprompt != self.current_softprompt:
                 req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
                 time.sleep(1) # Wait a second to unload the softprompt
@@ -180,7 +196,7 @@ class kai_bridge():
                 }
             while current_id and current_generation:
                 try:
-                    submit_req = requests.post(cluster + '/api/v2/generate/submit', json = submit_dict, headers = headers)
+                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
                     if submit_req.status_code == 404:
                         logger.warning(f"The generation we were working on got stale. Aborting!")
                     elif not submit_req.ok:
