@@ -10,7 +10,8 @@ except:
         def __init__(self):
             random.seed()
             # The cluster url
-            self.cluster_url = "https://stablehorde.net"
+            self.cluster_url = "https://aihorde.net"
+            self.old_api_url = "https://koboldai.net"
             # Where can your bridge reach your KAI instance
             self.kai_url = "http://localhost:5000"
             # Give a cool name to your instance
@@ -18,9 +19,11 @@ except:
             # The api_key identifies a unique user in the horde
             # Visit https://koboldai.net/register to create one before you can join
             self.api_key = "0000000000"
+            self.old_api_key = "0000000000"
             # Put other users whose prompts you want to prioritize.
             # The owner's username is always included so you don't need to add it here, unless you want it to have lower priority than another user
             self.priority_usernames = []
+            self.serve_old_api = False
     cd = temp()
     pass
 
@@ -63,15 +66,24 @@ class kai_bridge():
         return(True)
 
 
-    def bridge(self, interval, api_key, kai_name, kai_url, cluster, priority_usernames):
+    def bridge(self, interval, api_key, kai_name, kai_url, horde_url, priority_usernames):
         current_id = None
         current_payload = None
         return_error = None
         loop_retry = 0
         failed_requests_in_a_row = 0
         self.BRIDGE_AGENT = f"KoboldAI Bridge:10:https://github.com/db0/KoboldAI-Horde-Bridge"
-        headers = {"apikey": api_key}
+        cluster = horde_url
         while self.run:
+            # Switches which cluster we poll when we haven't picked up a request yet
+            if not current_id:
+                if not cd.serve_old_api or cluster != horde_url:
+                    cluster = horde_url
+                elif cluster == horde_url:
+                    cluster = cd.old_api_url
+            headers = {"apikey": api_key}
+            if cluster == cd.old_api_url:
+                headers = {"apikey": cd.old_api_key}
             if loop_retry > 3 and current_id:
                 logger.error(f"Exceeded retry count {loop_retry} for generation id {current_id}. Aborting generation!")
                 current_id = None
@@ -79,15 +91,16 @@ class kai_bridge():
                 current_generation = None
                 return_error = None
                 loop_retry = 0
-                submit_dict = {
-                    "id": current_id,
-                    "state": "faulted",
-                    "generation": "faulted",
-                    "seed": -1,
-                }
-                submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
-                if submit_req.status_code == 404:
-                    logger.warning(f"The generation we were working on got stale. Aborting!")
+                if cluster != cd.old_api_url:
+                    submit_dict = {
+                        "id": current_id,
+                        "state": "faulted",
+                        "generation": "faulted",
+                        "seed": -1,
+                    }
+                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
+                    if submit_req.status_code == 404:
+                        logger.warning(f"The generation we were working on got stale. Aborting!")
                 failed_requests_in_a_row += 1
                 if failed_requests_in_a_row > 3:
                     logger.error(f"{failed_requests_in_a_row} Requests failed in a row. Crashing bridge!")
@@ -107,11 +120,17 @@ class kai_bridge():
                 "softprompts": self.softprompts[self.model],
                 "bridge_agent": self.BRIDGE_AGENT,
             }
+            if cluster == cd.old_api_url:
+                gen_dict["max_content_length"] = self.max_context_length
+                gen_dict["model"] = self.model
             if current_id:
                 loop_retry += 1
             else:
                 try:
-                    pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers)
+                    if cluster == cd.old_api_url:
+                        pop_req = requests.post(cluster + '/api/v2/generate/pop', json = gen_dict, headers = headers)
+                    else: 
+                        pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers)
                 except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                     logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                     time.sleep(10)
@@ -196,7 +215,10 @@ class kai_bridge():
                 }
             while current_id and current_generation:
                 try:
-                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
+                    if cluster == cd.old_api_url:
+                        submit_req = requests.post(cluster + '/api/v2/generate/submit', json = submit_dict, headers = headers)
+                    else:
+                        submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
                     if submit_req.status_code == 404:
                         logger.warning(f"The generation we were working on got stale. Aborting!")
                     elif not submit_req.ok:
@@ -245,11 +267,11 @@ if __name__ == "__main__":
     api_key = args.api_key if args.api_key else cd.api_key
     kai_name = args.kai_name if args.kai_name else cd.kai_name
     kai_url = args.kai_url if args.kai_url else cd.kai_url
-    cluster = args.cluster_url if args.cluster_url else cd.cluster_url
+    horde_url = args.cluster_url if args.cluster_url else cd.cluster_url
     priority_usernames = args.priority_usernames if args.priority_usernames else cd.priority_usernames
     logger.init(f"{kai_name} Instance", status="Started")
     try:
-        kai_bridge().bridge(args.interval, api_key, kai_name, kai_url, cluster, priority_usernames)
+        kai_bridge().bridge(args.interval, api_key, kai_name, kai_url, horde_url, priority_usernames)
     except KeyboardInterrupt:
         logger.info(f"Keyboard Interrupt Received. Ending Process")
     logger.init(f"{kai_name} Instance", status="Stopped")
