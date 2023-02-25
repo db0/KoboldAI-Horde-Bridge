@@ -24,7 +24,7 @@ except:
             # Put other users whose prompts you want to prioritize.
             # The owner's username is always included so you don't need to add it here, unless you want it to have lower priority than another user
             self.priority_usernames = []
-            self.serve_old_api = False
+            self.serve_old_api = True
     cd = temp()
     pass
 
@@ -179,7 +179,7 @@ class kai_bridge():
                 # By default, we don't want to be annoucing the prompt send from the Horde to the terminal
                 current_payload['quiet'] = True
                 requested_softprompt = pop['softprompt']
-            logger.info("Job received. Starting generation...")
+            logger.info(f"Job received from {cluster}. Starting generation...")
             if requested_softprompt != self.current_softprompt:
                 req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
                 time.sleep(1) # Wait a second to unload the softprompt
@@ -245,7 +245,7 @@ class kai_bridge():
                             time.sleep(10)
                             continue
                     else:
-                        logger.info(f'Submitted generation with id {current_id} and contributed for {submit_req.json()["reward"]}')
+                        logger.info(f'Submitted generation to {cluster} with id {current_id} and contributed for {submit_req.json()["reward"]}')
                         failed_requests_in_a_row = 0
                     current_id = None
                     current_payload = None

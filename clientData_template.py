@@ -1,7 +1,7 @@
 # The cluster url. Don't change this unless you're running a private horde.
 cluster_url = "https://stablehorde.net"
 old_api_url = "http://koboldai.net"
-serve_old_api = False
+serve_old_api = True
 # Where can your bridge reach your KoboldAI Worker. 
 # If you're using a Google Colab, put the URL where you can reach your KoboldAI here.
 kai_url = "http://localhost:5000"
