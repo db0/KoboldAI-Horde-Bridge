@@ -2,6 +2,7 @@ import requests, json, os, time, argparse, urllib3
 from logger import logger, set_logger_verbosity, quiesce_logger, test_logger
 
 import random
+import time
 
 try:
     import clientData as cd
@@ -36,12 +37,17 @@ class kai_bridge():
         self.current_softprompt = None
         self.softprompts = {}
         self.run = True
+        self.last_retrieved = None
             
     def stop(self):
         self.run = False
     
     @logger.catch
     def validate_kai(self, kai):
+        if self.model != '' and (self.last_retrieved is None or time.time() - self.last_retrieved <= 30):
+            return True
+        self.last_retrieved = time.time()
+        logger.debug("Retrieving settings from KoboldAI Client...")
         try:
             req = requests.get(kai + '/api/latest/model')
             self.model = req.json()["result"]
