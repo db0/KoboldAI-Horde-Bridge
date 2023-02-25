@@ -87,6 +87,14 @@ class kai_bridge():
                     cluster = horde_url
                 elif cluster == horde_url:
                     cluster = cd.old_api_url
+                    try:
+                        test_req = requests.get(cd.old_api_url, timeout=5)
+                        if not test_req.ok:
+                            logger.warning(f"Old API {cd.old_api_url} faulted. Using only current horde")
+                            continue
+                    except:
+                        logger.warning(f"Old API {cd.old_api_url} faulted. Using only current horde")
+                        continue
             headers = {"apikey": api_key}
             if cluster == cd.old_api_url:
                 headers = {"apikey": cd.old_api_key}
