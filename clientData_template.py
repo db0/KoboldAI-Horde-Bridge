@@ -1,5 +1,5 @@
 # The cluster url. Don't change this unless you're running a private horde.
-cluster_url = "https://stablehorde.net"
+cluster_url = "https://aihorde.net"
 old_api_url = "http://koboldai.net"
 serve_old_api = True
 # Where can your bridge reach your KoboldAI Worker. 
