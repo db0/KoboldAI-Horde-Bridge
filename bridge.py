@@ -12,7 +12,6 @@ except:
             random.seed()
             # The cluster url
             self.cluster_url = "https://stablehorde.net"
-            self.old_api_url = "https://koboldai.net"
             # Where can your bridge reach your KAI instance
             self.kai_url = "http://localhost:5000"
             # Give a cool name to your instance
@@ -20,11 +19,9 @@ except:
             # The api_key identifies a unique user in the horde
             # Visit https://koboldai.net/register to create one before you can join
             self.api_key = "0000000000"
-            self.old_api_key = "0000000000"
             # Put other users whose prompts you want to prioritize.
             # The owner's username is always included so you don't need to add it here, unless you want it to have lower priority than another user
             self.priority_usernames = []
-            self.serve_old_api = True
     cd = temp()
     pass
 
@@ -79,9 +76,6 @@ class kai_bridge():
         kai_url, 
         horde_url, 
         priority_usernames,
-        serve_old_api = False,
-        old_api_url = None,
-        old_api_key = None,
     ):
         current_id = None
         current_payload = None
@@ -91,20 +85,6 @@ class kai_bridge():
         self.BRIDGE_AGENT = f"KoboldAI Bridge:10:https://github.com/db0/KoboldAI-Horde-Bridge"
         cluster = horde_url
         while self.run:
-            # Switches which cluster we poll when we haven't picked up a request yet
-            if not current_id:
-                if not serve_old_api or cluster != horde_url:
-                    cluster = horde_url
-                elif cluster == horde_url:
-                    cluster = old_api_url
-                    try:
-                        test_req = requests.get(old_api_url, timeout=5)
-                        if not test_req.ok:
-                            logger.warning(f"Old API {old_api_url} faulted. Using only current horde")
-                            continue
-                    except:
-                        logger.warning(f"Old API {old_api_url} faulted. Using only current horde")
-                        continue
             headers = {"apikey": api_key}
             if cluster == old_api_url:
                 headers = {"apikey": old_api_key}
@@ -302,9 +282,6 @@ if __name__ == "__main__":
             kai_url = kai_url, 
             horde_url = horde_url, 
             priority_usernames=priority_usernames,
-            serve_old_api = cd.serve_old_api,
-            old_api_url = cd.old_api_url,
-            old_api_key = cd.old_api_key,
         )
     except KeyboardInterrupt:
         logger.info(f"Keyboard Interrupt Received. Ending Process")
