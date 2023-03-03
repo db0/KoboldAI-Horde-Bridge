@@ -86,8 +86,6 @@ class kai_bridge():
         cluster = horde_url
         while self.run:
             headers = {"apikey": api_key}
-            if cluster == old_api_url:
-                headers = {"apikey": old_api_key}
             if loop_retry > 3 and current_id:
                 logger.error(f"Exceeded retry count {loop_retry} for generation id {current_id}. Aborting generation!")
                 current_id = None
@@ -95,16 +93,15 @@ class kai_bridge():
                 current_generation = None
                 return_error = None
                 loop_retry = 0
-                if cluster != old_api_url:
-                    submit_dict = {
-                        "id": current_id,
-                        "state": "faulted",
-                        "generation": "faulted",
-                        "seed": -1,
-                    }
-                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
-                    if submit_req.status_code == 404:
-                        logger.warning(f"The generation we were working on got stale. Aborting!")
+                submit_dict = {
+                    "id": current_id,
+                    "state": "faulted",
+                    "generation": "faulted",
+                    "seed": -1,
+                }
+                submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
+                if submit_req.status_code == 404:
+                    logger.warning(f"The generation we were working on got stale. Aborting!")
                 failed_requests_in_a_row += 1
                 if failed_requests_in_a_row > 3:
                     logger.error(f"{failed_requests_in_a_row} Requests failed in a row. Crashing bridge!")
@@ -124,17 +121,11 @@ class kai_bridge():
                 "softprompts": self.softprompts[self.model],
                 "bridge_agent": self.BRIDGE_AGENT,
             }
-            if cluster == old_api_url:
-                gen_dict["max_content_length"] = self.max_context_length
-                gen_dict["model"] = self.model
             if current_id:
                 loop_retry += 1
             else:
                 try:
-                    if cluster == old_api_url:
-                        pop_req = requests.post(cluster + '/api/v2/generate/pop', json = gen_dict, headers = headers)
-                    else: 
-                        pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers)
+                    pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers)
                 except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                     logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                     time.sleep(10)
@@ -219,10 +210,7 @@ class kai_bridge():
                 }
             while current_id and current_generation:
                 try:
-                    if cluster == old_api_url:
-                        submit_req = requests.post(cluster + '/api/v2/generate/submit', json = submit_dict, headers = headers)
-                    else:
-                        submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
+                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
                     if submit_req.status_code == 404:
                         logger.warning(f"The generation we were working on got stale. Aborting!")
                     elif not submit_req.ok:
