@@ -125,7 +125,7 @@ class kai_bridge():
                 loop_retry += 1
             else:
                 try:
-                    pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers)
+                    pop_req = requests.post(cluster + '/api/v2/generate/text/pop', json = gen_dict, headers = headers, timeout=40)
                 except (urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                     logger.error(f"Server {cluster} unavailable during pop. Waiting 10 seconds...")
                     time.sleep(10)
@@ -165,7 +165,7 @@ class kai_bridge():
                 req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
                 time.sleep(1) # Wait a second to unload the softprompt
             try:
-                gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload)
+                gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload, timeout=40)
             except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 logger.error(f"Worker {kai_url} unavailable. Waiting 10 seconds...")
                 loop_retry += 1
@@ -210,7 +210,7 @@ class kai_bridge():
                 }
             while current_id and current_generation:
                 try:
-                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers)
+                    submit_req = requests.post(cluster + '/api/v2/generate/text/submit', json = submit_dict, headers = headers, timeout=40)
                     if submit_req.status_code == 404:
                         logger.warning(f"The generation we were working on got stale. Aborting!")
                     elif not submit_req.ok:
