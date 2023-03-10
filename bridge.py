@@ -165,7 +165,7 @@ class kai_bridge():
                 req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
                 time.sleep(1) # Wait a second to unload the softprompt
             try:
-                gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload, timeout=40)
+                gen_req = requests.post(kai_url + '/api/latest/generate/', json = current_payload, timeout=300)
             except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
                 logger.error(f"Worker {kai_url} unavailable. Waiting 10 seconds...")
                 loop_retry += 1
