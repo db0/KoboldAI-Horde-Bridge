@@ -160,7 +160,7 @@ class kai_bridge():
                 # By default, we don't want to be annoucing the prompt send from the Horde to the terminal
                 current_payload['quiet'] = True
                 requested_softprompt = pop['softprompt']
-            logger.info(f"Job received from {cluster} for {current_payload.get('max_length',80)} tokens and {current_payload.get('max_context_length',1024)} max context. Starting generation...")
+            logger.info(f"Job received from {cluster} for {current_payload.setdefault('max_length',80)} tokens and {current_payload.setdefault('max_context_length',1024)} max context. Starting generation...")
             if requested_softprompt != self.current_softprompt:
                 req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
                 time.sleep(1) # Wait a second to unload the softprompt
