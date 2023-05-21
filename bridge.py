@@ -161,6 +161,11 @@ class kai_bridge():
                 current_payload['quiet'] = True
                 requested_softprompt = pop['softprompt']
             logger.info(f"Job received from {cluster} for {current_payload.setdefault('max_length',80)} tokens and {current_payload.setdefault('max_context_length',1024)} max context. Starting generation...")
+            
+            if "soft_prompt" in current_payload and current_payload["soft_prompt"] not in self.softprompts[self.model]:
+                #prevent unknown rogue softprompt from crashing horde worker
+                current_payload["soft_prompt"] = "" #this is a valid value that functions like no softprompt
+            
             if requested_softprompt != self.current_softprompt:
                 req = requests.put(kai_url + '/api/latest/config/soft_prompt/', json = {"value": requested_softprompt})
                 time.sleep(1) # Wait a second to unload the softprompt
